@@ -1,0 +1,179 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: goldilocks
+  name: goldilocks-g1m1
+  namespace: goldilocks
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: goldilocks
+  serviceName: goldilocks
+  template:
+    metadata:
+      labels:
+        app: goldilocks
+    spec:
+      initContainers:
+        - name: init-sysctl
+          image: busybox
+          command:
+          - /bin/sh
+          - -c
+          - |
+            sysctl -w kernel.shmmax=4294967296
+            sysctl -w kernel.shmmni=4096
+            sysctl -w kernel.shmall=1048576
+            sysctl -w kernel.sem="250 32000 100 128"
+          securityContext:
+            privileged: true
+      containers:
+      - name: goldilocks
+        image: docker.io/yjkim1ntels/goldilocks:3.2.5
+        env:
+          - name : TABLE_SPACE_SIZE
+            value: "100M"
+          - name : TEMP_TABLESPACE_SIZE
+            value: "100M"
+          - name : SERVICE_ACCOUNT
+            value: "SA"
+          - name : GROUP_NAME
+            value: "g1"
+          - name : MEMBER_NAME
+            value: "g1m1"
+          - name : CLUSTER_IP_ADDR
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name : CLUSTER_PORT
+            value: "10101"
+          - name : CLUSTER_MASTER_IP_ADDR
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name : CLUSTER_MASTER_PORT
+            value: "10101"
+          - name : CLUSTER_GROUP_IP_ADDR
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name : CLUSTER_GROUP_PORT
+            value: "10101"
+        command:
+         - /bin/sh
+         - -c
+         - sleep 100000
+        volumeMounts:
+        - name: goldilocks-prop
+          mountPath: /home/sunje/goldilocks_data/conf
+        - name: logind-conf
+          mountPath: /etc/systemd
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          tcpSocket:
+            port: 10101
+          failureThreshold: 3
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        ports:
+        - containerPort: 10101
+          name: goldilocks
+          protocol: TCP
+        readinessProbe:
+          tcpSocket:
+            port: 10101
+          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      volumes:
+        - name: goldilocks-prop
+          configMap:
+            name: goldilocks.properites
+        - name: logind-conf
+          configMap:
+            name: logind-conf
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+  updateStrategy:
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - metadata:
+      creationTimestamp: null
+      labels:
+        app: goldilocks
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+      storageClassName: gitlab-sc
+      volumeMode: Filesystem
+---
+apiVersion: v1
+data:
+  goldilocks.properties.conf: |-
+
+kind: ConfigMap
+metadata:
+  name: goldilocks.properites
+  namespace: goldilocks
+---
+apiVersion: v1
+data:
+  logind.conf: |+
+    #  This file is part of systemd.
+    #
+    #  systemd is free software; you can redistribute it and/or modify it
+    #  under the terms of the GNU Lesser General Public License as published by
+    #  the Free Software Foundation; either version 2.1 of the License, or
+    #  (at your option) any later version.
+    #
+    # Entries in this file show the compile time defaults.
+    # You can change settings by editing this file.
+    # Defaults can be restored by simply deleting this file.
+    #
+    # See logind.conf(5) for details.
+
+    [Login]
+    #NAutoVTs=6
+    #ReserveVT=6
+    #KillUserProcesses=no
+    #KillOnlyUsers=
+    #KillExcludeUsers=root
+    #InhibitDelayMaxSec=5
+    #HandlePowerKey=poweroff
+    #HandleSuspendKey=suspend
+    #HandleHibernateKey=hibernate
+    #HandleLidSwitch=suspend
+    #HandleLidSwitchDocked=ignore
+    #PowerKeyIgnoreInhibited=no
+    #SuspendKeyIgnoreInhibited=no
+    #HibernateKeyIgnoreInhibited=no
+    #LidSwitchIgnoreInhibited=yes
+    #IdleAction=ignore
+    #IdleActionSec=30min
+    #RuntimeDirectorySize=10%
+    RemoveIPC=no
+    #UserTasksMax=
+
+kind: ConfigMap
+metadata:
+  name: logind-conf
+  namespace: goldilocks
+

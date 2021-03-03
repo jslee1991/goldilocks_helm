@@ -1,0 +1,124 @@
+{{- $defaultFullname := include "goldilocks.fullname" . }} 
+
+{{ range $member := $.Values.topology.groups }}
+---
+{{- $groupName := $member.name }} 
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: {{ $defaultFullname }}
+    release: "{{ $.Release.Name }}"
+    heritage: "{{ $.Release.Service }}"
+    group: {{ $groupName  }}
+  name: {{ $groupName  }} 
+  namespace: {{ $.Release.Namespace }} 
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: {{ $member.replicaCount | default $.Values.groups.replicaCount  }} 
+  revisionHistoryLimit: {{ $member.revisionHistoryLimit | default $.Values.groups.revisionHistoryLimit }}  
+  serviceName: {{ $.Release.Name }} 
+  selector:
+    matchLabels:
+      app: {{ $defaultFullname }}
+      release: {{ $.Release.Name }}
+      group: {{ $groupName  }}
+  template:
+    metadata:
+      labels:
+        app: {{ $defaultFullname }}
+        release: {{ $.Release.Name }}
+        group: {{ $groupName  }}
+    spec:
+      volumes:
+        - name: goldilocks-data
+          persistentVolumeClaim:
+             claimName: goldilocks-pvc-volume
+        - name: nfs-volumn
+          persistentVolumeClaim:
+             claimName: nfs-pvc
+      containers:
+      - name: {{ $.Chart.Name }}
+        image: "{{ $member.image.repository | default $.Values.groups.image.repository }}:{{ $.Chart.AppVersion }}"  
+        imagePullPolicy: {{ $member.image.pullPolicy | default $.Values.groups.image.pullPolicy }}
+        securityContext:
+          runAsUser: 1000
+        env:
+          - name: APP_NAME
+            value: GOLDILOCKS
+#          - name: MY_POD_NAME
+#            value: goldilocks-{{ $.Values.groups.replicaCount }}
+          - name: MY_POD_IP
+            valueFrom:
+             fieldRef:
+              fieldPath: status.podIP
+#        {{- range $key, $value := $member.envOverrides | default $.Values.groups.envOverrides }}
+ #         - name: {{ printf "%s" $key | replace "." "_" | upper | quote }}
+ #           value: {{ $value | quote }}
+ #       {{- end }}
+#        command:
+#         - /bin/sh
+#         - -c
+#         -  /home/sunje/entrypoint.sh
+#         - sleep 100000 
+        volumeMounts:
+        - mountPath: /home/sunje/goldilocks_data
+          name: goldilocks-data
+        - mountPath: /home/sunje/nfs_volumn
+          name: nfs-volumn
+        ports:
+        - containerPort: 22581
+          name: {{ $.Chart.Name }} 
+          protocol: TCP
+        lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /home/sunje/goldilocks_home/drop_member.sh
+
+        livenessProbe:
+          exec:
+            command:
+            - cat
+            - /home/sunje/entrypoint.sh
+          {{- if not $.Values.groups.livenessProbe }}
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+          {{- else }}
+          initialDelaySeconds: {{ $.Values.groups.livenessProbe.initialDelaySeconds | default 30}}
+          {{- if $.Values.groups.livenessProbe.periodSeconds }}
+          periodSeconds: {{ $.Values.groups.livenessProbe.periodSeconds }}
+          {{- end }}
+          timeoutSeconds: {{ $.Values.groups.livenessProbe.timeoutSeconds | default 5}}
+          {{- if $.Values.groups.livenessProbe.successThreshold }}
+          successThreshold: {{ $.Values.groups.livenessProbe.successThreshold }}
+          {{- end }}
+          {{- if $.Values.groups.livenessProbe.failureThreshold }}
+          failureThreshold: {{ $.Values.groups.livenessProbe.failureThreshold }}
+          {{- end }}
+          {{- end }}
+        readinessProbe:
+          exec:
+            command:
+            - cat
+            - /home/sunje/entrypoint.sh
+          initialDelaySeconds: {{ $.Values.groups.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ $.Values.groups.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ $.Values.groups.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ $.Values.groups.readinessProbe.successThreshold }}
+          failureThreshold: {{ $.Values.groups.readinessProbe.failureThreshold }}
+        resources: {}
+        terminationMessagePath: {{ $.Values.groups.terminationMessagePath }} 
+        terminationMessagePolicy: {{ $.Values.groups.terminationMessagePolicy }}  
+      dnsPolicy: {{ $.Values.groups.dnsPolicy | default "ClusterFirst" }} 
+      restartPolicy: {{ $.Values.groups.restartPolicy | default "Always" }} 
+      schedulerName: {{ $.Values.groups.schedulerName | default "default-scheduler" }} 
+      terminationGracePeriodSeconds: {{ $.Values.groups.terminationGracePeriodSeconds | default 30 }}
+  updateStrategy:
+{{ toYaml $.Values.groups.updateStrategy | indent 4 }} 
+---
+{{ end }}
+
+{{ include "goldilocks-cluster-service" . }}
+

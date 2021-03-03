@@ -1,0 +1,121 @@
+########################
+# global default options 
+########################
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: goldilocks
+
+groupMaster: "goldilocks-0"
+
+########################
+# goldilocks default options 
+########################
+# using goldilocks init container setting
+
+# goldilocks default group members setting 
+groups:
+  replicaCount: 0                       # members count 
+#  revisionHistoryLimit: 10 
+  envOverrides: {
+        "TABLE_SPACE_SIZE":"100M",
+        "TEMP_TABLESPACE_SIZE":"100M",
+        "SERVICE_ACCOUNT_NAME":"js",
+        "SERVICE_ACCOUNT_PASSWD":"js",
+        "CREATE_TABLE_QUERY":"CREATE TABLE TEST1 (C1 INT PRIMARY KEY)",
+  }
+# envOverrides: {
+#"TABLE_SPACE_SIZE":"100M"
+#}
+#
+
+  image:
+    repository: docker.io/sunjesoft/cluster
+    pullPolicy: IfNotPresent
+    pullSecrets: []
+  
+  livenessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 9
+    timeoutSeconds: 8
+    successThreshold: 1 
+    failureThreshold: 6
+  
+  readinessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+  
+  #terminationMessagePath: /dev/termination-log
+  #terminationMessagePolicy: File
+  
+  #dnsPolicy: ClusterFirst1
+  #restartPolicy: Always1
+  #schedulerName: default-scheduler1
+  #terminationGracePeriodSeconds: 31
+  
+  updateStrategy:
+    type: "RollingUpdate" # RollingUpdate, OnDelete
+  
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 22581
+
+resources: 
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: 8
+    memory: 3000M
+  requests:
+    cpu: 2
+    memory: 1700M
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+########################
+# topology goldilocks 
+########################
+topology:
+  groups:
+    - name: goldilocks
+      replicaCount: 1                  # members count 
+#      revisionHistoryLimit: 10 
+      envOverrides: {
+        "TABLE_SPACE_SIZE":"1M",
+        "TEMP_TABLESPACE_SIZE":"1M",
+        "TABLE_UNDO_SIZE":"1M",
+        "SERVICE_ACCOUNT_NAME":"helm_user",
+        "SERVICE_ACCOUNT_PASSWD":"new1234",
+	"CREATE_TABLE_QUERY":"create table employee (emp_no varchar(24) primary key, emp_dept_name varchar(24), emp_mail varchar(24), emp_name varchar(24), emp_tel_no varchar(24))"
+      }
+
+      image:
+        repository: docker.io/sunjesoft/cluster
+        pullPolicy: IfNotPresent
+        pullSecrets: []
+
+      persistence:
+        enabled: true

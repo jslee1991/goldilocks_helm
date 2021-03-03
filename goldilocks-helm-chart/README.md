@@ -24,3 +24,23 @@ gsql) select * from x$instance;
 ----
 
 ```
+
+* values
+```
+pv/pvc 사용유무
+nfs 사용유무
+service 사용유무 등 k8s 모듈 사용 여부에 대한 check
+
+goldilocks config에 대한 내용 (init sql 등..)
+
+```
+
+* templates 구성
+```
+statefulset 
+pv
+pvc
+service - cluster_ip ( master -> for cluster join , regular -> for access randoming instance )
+service - node_port ( listening port )
+
+```

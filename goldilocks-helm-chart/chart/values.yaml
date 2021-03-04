@@ -109,7 +109,7 @@ topology:
         "TABLE_UNDO_SIZE":"1M",
         "SERVICE_ACCOUNT_NAME":"helm_user",
         "SERVICE_ACCOUNT_PASSWD":"new1234",
-	"CREATE_TABLE_QUERY":"create table employee (emp_no varchar(24) primary key, emp_dept_name varchar(24), emp_mail varchar(24), emp_name varchar(24), emp_tel_no varchar(24))"
+        "CREATE_TABLE_QUERY":"create table employee (emp_no varchar(24) primary key, emp_dept_name varchar(24), emp_mail varchar(24), emp_name varchar(24), emp_tel_no varchar(24))"
       }
 
       image:

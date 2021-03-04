@@ -29,3 +29,9 @@ spec:
 ---
 {{- end -}}
 
+### 
+```
+위 변수 정의에 대해서는 values를 통해 정의를 해 주어야 함.
+변수로 정의 된 pv-pvc name / storage size / path는 cluster별로 구분되어야 함.
+
+```

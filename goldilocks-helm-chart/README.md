@@ -2,7 +2,7 @@
 
 # Goldilocks Helm chart deploy 
 
-* 라이선스 파일을 kube config map 으로 생성 
+* 라이선스 파일을 kube config map 으로 생성  (현재는 무기한 free license로 구성되어 있으며, 추후 라이선스 정책에 따라 config기능에 대한 사용유무를 정의 할 예정입니다.)
 
 ```sh 
 cd example 
@@ -17,7 +17,7 @@ cd chart
 helm install goldilocks --namespace goldilocks . 
 
 
-kubectl exec -it goldilocks0-0 bash 
+kubectl exec -it goldilocks-0 bash 
 
 gsql sys gliese --as sysdba
 gSQL> select * from x$instance;

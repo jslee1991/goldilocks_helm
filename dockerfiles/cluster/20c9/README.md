@@ -1,4 +1,5 @@
-explain:
+* explain:
+```
 docker image 생성 후 build 후 run_shell로 들어가서 정상 수행을 확인해보기 위해 만들었다.
 step1. entrypoint-init.sh
 컨테이너에서 사용하기 위해 받아 오는 변수가 있는데 docker로 하다 보니 값이
@@ -87,3 +88,4 @@ step3) make build
 step4) make run_shell
 step5) make exec_shell
 
+```

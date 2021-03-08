@@ -109,7 +109,7 @@ topology:
         "TABLE_UNDO_SIZE":"1M",
         "SERVICE_ACCOUNT_NAME":"helm_user",
         "SERVICE_ACCOUNT_PASSWD":"new1234",
-	"CREATE_TABLE_QUERY":"create table employee (emp_no varchar(24) primary key, emp_dept_name varchar(24), emp_mail varchar(24), emp_name varchar(24), emp_tel_no varchar(24))"
+        "CREATE_TABLE_QUERY":"create table employee (emp_no varchar(24) primary key, emp_dept_name varchar(24), emp_mail varchar(24), emp_name varchar(24), emp_tel_no varchar(24))"
       }
 
       image:
@@ -119,7 +119,17 @@ topology:
 
       persistence:
         enabled: true
+<<<<<<< HEAD
         pv_name: "goldilocks-pv-claim"
         pvc_name: "goldilocks-pvc-claim"
         storage: "10Gi"
         path: "/home/goldilocks"
+=======
+        
+########################################################################################################################
+# 기본적으로 topology는 topology goldilocks 를참조합니다.
+# 1나의 chart로 여러 개의 cluster를 배포 시에는 topology goldilocks가 다수 생성이 될 수 있으며,
+# 이럴 경우에 공통된 topology인 (중복 정의를 최소화 하기위한) goldilocks default options topology를 사용합니다.
+# 공통 topology를 사용하기 위해서는 templates또한 변경 해주어야 합니다.
+########################################################################################################################
+>>>>>>> b349fc679861e886f99a5dab01f02de3173cbb67

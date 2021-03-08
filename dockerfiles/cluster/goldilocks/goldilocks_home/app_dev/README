@@ -1,0 +1,5 @@
+ Application Development
+* pygoldilocks enables python application to connect Database.
+* ruby-goldilocks enables ruby application to connect Database.
+* Hinernate enables Java ORM application to connect Database.
+* PDO-GOLDILOCKS enables pdo application to connect Database.

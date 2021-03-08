@@ -1,0 +1,13 @@
+#
+# administration files
+#
+
+standalone/                           # dictionary views for standalone system
+standalone/InformationSchema.sql      # SQL-standard INFORMATION_SCHEMA views
+standalone/DictionarySchema.sql       # database dictionary views
+standalone/PerformanceViewSchema.sql  # dynamic performance views such as V$___, ...
+
+cluster/                              # dictionary views for cluster system
+cluster/InformationSchema.sql         # SQL-standard INFORMATION_SCHEMA views
+cluster/DictionarySchema.sql          # database dictionary views
+cluster/PerformanceViewSchema.sql     # dynamic performance views such as V$___, GV$___, ...

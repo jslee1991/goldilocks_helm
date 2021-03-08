@@ -1,0 +1,568 @@
+//##########################################
+//# GOLDILOCKS Sample - XA
+//##########################################
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+EXEC SQL INCLUDE SQLCA;
+
+#define  SUCCESS  0
+#define  FAILURE  -1
+
+#define  PRINT_SQL_ERROR(aMsg)                                      \
+    {                                                               \
+        printf("\n");                                               \
+        printf(aMsg);                                               \
+        printf("\nSQLCODE : %d\nSQLSTATE : %s\nERROR MSG : %s\n",   \
+               sqlca.sqlcode,                                       \
+               SQLSTATE,                                            \
+               sqlca.sqlerrm.sqlerrmc );                            \
+    }
+
+/* User-specific Definitions */
+#define  BUF_LEN 101
+
+#define GOLDILOCKS_SQL_THROW( aLabel )               \
+    goto aLabel;
+
+#define GOLDILOCKS_SQL_TRY( aExpression )            \
+    do                                          \
+    {                                           \
+        if( !(SQL_SUCCEEDED( aExpression ) ) )  \
+        {                                       \
+            goto GOLDILOCKS_FINISH_LABEL;            \
+        }                                       \
+    } while( 0 )
+
+#define GOLDILOCKS_FINISH                           \
+    goto GOLDILOCKS_FINISH_LABEL;                   \
+    GOLDILOCKS_FINISH_LABEL:
+
+/* Print diagnostic record to console  */
+void PrintDiagnosticRecord( SQLSMALLINT aHandleType, SQLHANDLE aHandle )
+{
+    SQLCHAR       sSQLState[6];
+    SQLINTEGER    sNaiveError;
+    SQLSMALLINT   sTextLength;
+    SQLCHAR       sMessageText[SQL_MAX_MESSAGE_LENGTH];
+    SQLSMALLINT   sRecNumber = 1;
+    SQLRETURN     sReturn;
+
+    /* SQLGetDiagRec returns the currrent values that contains error, warning */
+    while( 1 )
+    {
+        sReturn = SQLGetDiagRec( aHandleType,
+                                 aHandle,
+                                 sRecNumber,
+                                 sSQLState,
+                                 &sNaiveError,
+                                 sMessageText,
+                                 100,
+                                 &sTextLength );
+
+        if( sReturn == SQL_NO_DATA )
+        {
+            break;
+        }
+
+        GOLDILOCKS_SQL_TRY( sReturn );
+
+        printf("\n=============================================\n" );
+        printf("SQL_DIAG_SQLSTATE     : %s\n", sSQLState );
+        printf("SQL_DIAG_NATIVE       : %d\n", sNaiveError );
+        printf("SQL_DIAG_MESSAGE_TEXT : %s\n", sMessageText );
+        printf("=============================================\n" );
+
+        sRecNumber++;
+    }
+
+    return;
+
+    GOLDILOCKS_FINISH;
+
+    printf("SQLGetDiagRec failure.\n" );
+
+    return;
+}
+
+int testCreateTable()
+{
+    /*----------------------------------------------
+      Create Table
+      ------------------------------------------------*/
+    EXEC SQL AT XA_CONN
+        DROP TABLE IF EXISTS DEPOSIT;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL AT XA_CONN
+        CREATE TABLE DEPOSIT (
+            NAME          VARCHAR(30),
+            BALANCE       INTEGER,
+            ACCOUNTNUMBER VARCHAR(100),
+            ACCOUNTDAY    DATE,
+            INTERESTRATES NUMBER(10, 5),
+            PHONENUMBER   VARCHAR(30) );
+
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL AT XA_CONN COMMIT;
+
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    EXEC SQL AT XA_CONN ROLLBACK;
+
+    return FAILURE;
+}
+
+int testDropTable()
+{
+    /*----------------------------------------------
+      Drop Table
+      ------------------------------------------------*/
+    EXEC SQL AT XA_CONN
+        DROP TABLE DEPOSIT;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL AT XA_CONN COMMIT;
+
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    EXEC SQL AT XA_CONN ROLLBACK;
+
+    return FAILURE;
+}
+
+/* Insert funtion */
+int testInsert( )
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    char             sName[BUF_LEN];
+    int              sNameInd                    = 0;
+    int              sBalance                    = 0;
+    int              sBalanceInd                 = 0;
+    char             sAccountNumber[BUF_LEN];
+    int              sAccountNumberInd           = 0;
+    DATE             sAccountDay;
+    int              sAccountDayInd              = 0;
+    double           sInterestRates              = 0;
+    int              sInterestRatesInd           = 0;
+    char             sPhoneNumber[BUF_LEN];
+    int              sPhoneNumberInd             = 0;
+    EXEC SQL END DECLARE SECTION;
+
+    sNameInd              = snprintf( (char*)sName, BUF_LEN, "sunje" );
+    sBalance              = 30000000;
+    sAccountNumberInd     = snprintf( (char*)sAccountNumber, BUF_LEN, "9999-99-9999" );
+    sAccountDay.year      = 2009;
+    sAccountDay.month     = 1;
+    sAccountDay.day       = 1;
+    sAccountDay.hour      = 0;
+    sAccountDay.minute    = 0;
+    sAccountDay.second    = 0;
+    sAccountDay.fraction  = 0;
+    sInterestRates        = (double)5.0;
+    sPhoneNumberInd       = snprintf( (char*)sPhoneNumber, BUF_LEN, "010-9999-9999" );
+
+    EXEC SQL AT XA_CONN
+        INSERT INTO DEPOSIT
+        VALUES ( :sName :sNameInd,
+                 :sBalance :sBalanceInd,
+                 :sAccountNumber :sAccountNumberInd,
+                 :sAccountDay :sAccountDayInd,
+                 :sInterestRates :sInterestRatesInd,
+                 :sPhoneNumber :sPhoneNumberInd );
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    /* the number of rows affected by an INSERT statement */
+    printf("\n%d row created.\n\n", sqlca.sqlerrd[2] );
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    return FAILURE;
+}
+
+/* Update funtion */
+int testUpdate( )
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    char     sCondition[BUF_LEN];
+    int      sConditionInd           = 0;
+    double   sValue                  = 0;
+    int      sValueInd               = 0;
+    EXEC SQL END DECLARE SECTION;
+
+    sValue        = (SQLREAL)6.0;
+    sConditionInd = snprintf( (char*)sCondition,
+                              BUF_LEN,
+                              "9999-99-9999" );
+
+    EXEC SQL AT XA_CONN
+        UPDATE Deposit
+        Set InterestRates = :sValue :sValueInd
+        WHERE AccountNumber = :sCondition :sConditionInd;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    /* the number of rows affected by an UPDATE statement */
+    printf("\n%d row updated.\n\n", sqlca.sqlerrd[2] );
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    return FAILURE;
+}
+
+/* Select funtion */
+int testSelect( )
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    char             sName[BUF_LEN];
+    int              sNameInd                    = 0;
+    int              sBalance                    = 0;
+    int              sBalanceInd                 = 0;
+    char             sAccountNumber[BUF_LEN];
+    int              sAccountNumberInd           = 0;
+    DATE             sAccountDay;
+    int              sAccountDayInd              = 0;
+    double           sInterestRates              = 0;
+    int              sInterestRatesInd           = 0;
+    char             sPhoneNumber[BUF_LEN];
+    int              sPhoneNumberInd             = 0;
+    EXEC SQL END DECLARE SECTION;
+    int              sCount                      = 0;
+    int              sIsOpen                     = 0;
+
+    EXEC SQL DECLARE CUR1 CURSOR FOR
+        SELECT NAME, BALANCE, ACCOUNTNUMBER, ACCOUNTDAY, INTERESTRATES, PHONENUMBER
+        FROM DEPOSIT;
+
+    EXEC SQL AT XA_CONN
+        OPEN CUR1;
+    if( sqlca.sqlcode != 0 )
+    {
+        goto fail_exit;
+    }
+    sIsOpen = 1;
+
+    printf( "==========================================\n" );
+    while( 1 )
+    {
+        EXEC SQL AT XA_CONN
+            FETCH CUR1 INTO
+            :sName :sNameInd,
+            :sBalance :sBalanceInd,
+            :sAccountNumber :sAccountNumberInd,
+            :sAccountDay :sAccountDayInd,
+            :sInterestRates :sInterestRatesInd,
+            :sPhoneNumber :sPhoneNumberInd;
+        if( sqlca.sqlcode == SQL_NO_DATA )
+        {
+            break;
+        }
+        else if( sqlca.sqlcode != 0 )
+        {
+            goto fail_exit;
+        }
+
+        printf( "NAME          : " );
+        if( sNameInd == -1 )
+        {
+            printf( "(null)" );
+        }
+        else
+        {
+            printf( "%s", sName );
+        }
+        printf( "\n" );
+
+        printf( "BALANCE       : " );
+        if( sBalanceInd == -1 )
+        {
+            printf( "(null)" );
+        }
+        else
+        {
+            printf( "%d", sBalance );
+        }
+        printf( "\n" );
+
+        printf( "ACCOUNTNUMBER : " );
+        if( sAccountNumberInd == -1 )
+        {
+            printf( "(null)" );
+        }
+        else
+        {
+            printf( "%s", sAccountNumber );
+        }
+        printf( "\n" );
+
+        printf( "ACCOUNTDAY    : " );
+        if( sAccountDayInd == -1 )
+        {
+            printf( "(null)" );
+        }
+        else
+        {
+            printf( "%4d-%02d-%02d", sAccountDay.year, sAccountDay.month, sAccountDay.day);
+        }
+        printf( "\n" );
+
+        printf( "INTERESTRATES : " );
+        if( sInterestRatesInd == -1 )
+        {
+            printf( "(null)" );
+        }
+        else
+        {
+            printf( "%lf", sInterestRates );
+        }
+        printf( "\n" );
+
+        printf( "PHONENUMBER   : " );
+        if( sPhoneNumberInd == -1 )
+        {
+            printf( "(null)" );
+        }
+        else
+        {
+            printf( "%s", sPhoneNumber );
+        }
+        printf( "\n" );
+        printf( "------------------------------------------\n" );
+
+        sCount ++;
+    }
+
+    printf( "==========================================\n" );
+    printf( "\n%d rows selected.\n\n", sCount );
+
+    sIsOpen = 0;
+    EXEC SQL AT XA_CONN
+        CLOSE CUR1;
+    if( sqlca.sqlcode != 0 )
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    if( sIsOpen == 1 )
+    {
+        EXEC SQL AT XA_CONN
+            CLOSE CUR1;
+    }
+
+    return FAILURE;
+}
+
+/* Delete funtion */
+int testDelete( )
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    char     sCondition[BUF_LEN];
+    int      sConditionInd           = 0;
+    EXEC SQL END DECLARE SECTION;
+
+    sConditionInd = snprintf( (char*)sCondition,
+                              BUF_LEN,
+                              "9999-99-9999" );
+
+    EXEC SQL AT XA_CONN
+        DELETE FROM DEPOSIT WHERE AccountNumber = :sCondition :sConditionInd;
+    if( sqlca.sqlcode != 0 )
+    {
+        goto fail_exit;
+    }
+
+    /* the number of rows affected by an DELETE statement */
+    printf("\n%d row deleted.\n\n", sqlca.sqlerrd[2] );
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    return FAILURE;
+}
+
+/* Start funtion */
+int main( int aArgc, char** aArgv )
+{
+    SQLHENV       sEnv    = NULL;
+    SQLINTEGER    sState  = 0;
+    xa_switch_t * sXaSwitch;
+    XID           sXid;
+
+    sXaSwitch = SQLGetXaSwitch();
+
+    /* If you call SQLAllocEnv() that is included in GOLDILOCKS ODBC*/
+    GOLDILOCKS_SQL_TRY( SQLAllocHandle( SQL_HANDLE_ENV,
+                                   NULL,
+                                   &sEnv ) );
+    sState = 1;
+
+    /* SQLSetEnvAttr is sets attributes that govern aspects of environments */
+    GOLDILOCKS_SQL_TRY( SQLSetEnvAttr( sEnv,
+                                  SQL_ATTR_ODBC_VERSION,
+                                  (SQLPOINTER)SQL_OV_ODBC3,
+                                  0 ) );
+
+    if( (sXaSwitch->xa_open_entry)( "DSN=GOLDILOCKS;UID=test;PWD=test;CONN_NAME=XA_CONN", 0, TMNOFLAGS ) != XA_OK )
+    {
+        GOLDILOCKS_SQL_THROW( GOLDILOCKS_FINISH_LABEL );
+    }
+    sState = 2;
+
+    sXid.formatID = 0;
+    sXid.gtrid_length = 2;
+    sXid.bqual_length = 1;
+    memcpy( sXid.data, "100", sXid.gtrid_length + sXid.bqual_length );
+
+    /* Create Table */
+    if( testCreateTable() != SUCCESS )
+    {
+        GOLDILOCKS_SQL_THROW( GOLDILOCKS_FINISH_LABEL );
+    }
+    sState = 3;
+
+    if( (sXaSwitch->xa_start_entry)( &sXid, 0, TMNOFLAGS ) != XA_OK )
+    {
+        GOLDILOCKS_SQL_THROW( GOLDILOCKS_FINISH_LABEL );
+    }
+    sState = 4;
+
+    /* Insert Row */
+    if( testInsert() != SUCCESS )
+    {
+        GOLDILOCKS_SQL_THROW( GOLDILOCKS_FINISH_LABEL );
+    }
+
+    /* Update Row */
+    if( testUpdate() != SUCCESS )
+    {
+        GOLDILOCKS_SQL_THROW( GOLDILOCKS_FINISH_LABEL );
+    }
+
+    /* Select Rows */
+    if( testSelect() != SUCCESS )
+    {
+        GOLDILOCKS_SQL_THROW( GOLDILOCKS_FINISH_LABEL );
+    }
+
+    /* Delete Row */
+    if( testDelete() != SUCCESS )
+    {
+        GOLDILOCKS_SQL_THROW( GOLDILOCKS_FINISH_LABEL );
+    }
+
+    sState = 3;
+    if( (sXaSwitch->xa_end_entry)( &sXid, 0, TMSUCCESS ) != XA_OK )
+    {
+        GOLDILOCKS_SQL_THROW( GOLDILOCKS_FINISH_LABEL );
+    }
+
+    if( (sXaSwitch->xa_prepare_entry)( &sXid, 0, TMNOFLAGS ) != XA_OK )
+    {
+        GOLDILOCKS_SQL_THROW( GOLDILOCKS_FINISH_LABEL );
+    }
+
+    if( (sXaSwitch->xa_commit_entry)( &sXid, 0, TMNOFLAGS ) != XA_OK )
+    {
+        GOLDILOCKS_SQL_THROW( GOLDILOCKS_FINISH_LABEL );
+    }
+
+    sState = 2;
+    /* Drop Table */
+    if( testDropTable() != SUCCESS )
+    {
+        GOLDILOCKS_SQL_THROW( GOLDILOCKS_FINISH_LABEL );
+    }
+
+    sState = 1;
+    if( (sXaSwitch->xa_close_entry)( "", 0, TMNOFLAGS ) != XA_OK )
+    {
+        GOLDILOCKS_SQL_THROW( GOLDILOCKS_FINISH_LABEL );
+    }
+
+    /* SQLFreeHandleEnv frees resources associated with a environment */
+    sState = 0;
+    GOLDILOCKS_SQL_TRY( SQLFreeHandle( SQL_HANDLE_ENV,
+                                  sEnv ) );
+
+    sEnv = NULL;
+
+    return EXIT_SUCCESS;
+
+    GOLDILOCKS_FINISH;
+
+    if( sEnv != NULL)
+    {
+        PrintDiagnosticRecord( SQL_HANDLE_ENV, sEnv );
+    }
+
+    switch( sState )
+    {
+        case 4:
+            (void)(sXaSwitch->xa_end_entry)( &sXid, 0, TMSUCCESS );
+            (void)(sXaSwitch->xa_prepare_entry)( &sXid, 0, TMNOFLAGS );
+            (void)(sXaSwitch->xa_commit_entry)( &sXid, 0, TMNOFLAGS );
+        case 3:
+            (void)testDropTable();
+        case 2:
+            (void)(sXaSwitch->xa_close_entry)( "", 0, TMNOFLAGS );
+        case 1:
+            (void)SQLFreeHandle( SQL_HANDLE_ENV, sEnv );
+            sEnv = NULL;
+        default:
+            break;
+    }
+
+    return EXIT_FAILURE;
+}

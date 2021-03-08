@@ -1,0 +1,15 @@
+{{ define "goldilocks-volume" -}}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.topology.groups.persistence.pvc_name }}
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.topology.groups.persistence.storage }}
+---
+{{- end -}}

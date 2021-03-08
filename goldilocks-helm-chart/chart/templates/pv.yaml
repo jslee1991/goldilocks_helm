@@ -1,0 +1,21 @@
+{{ range $member := $.Values.topology.groups }}
+
+{{- if $member.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ $member.persistence.pv_name }}
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: {{ $member.persistence.storage }}
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: {{ $member.persistence.path }}
+---
+{{- end }}
+{{ end }}

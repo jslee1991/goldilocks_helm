@@ -34,7 +34,7 @@ spec:
       volumes:
         - name: goldilocks-data
           persistentVolumeClaim:
-             claimName: goldilocks-pvc-volume
+             claimName: goldilocks-pvc-claim
 #        - name: nfs-volumn
 #          persistentVolumeClaim:
 #             claimName: nfs-pvc

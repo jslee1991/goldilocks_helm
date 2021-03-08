@@ -101,7 +101,7 @@ affinity: {}
 topology:
   groups:
     - name: goldilocks
-      replicaCount: 1                  # members count 
+      replicaCount: 2                  # members count 
 #      revisionHistoryLimit: 10 
       envOverrides: {
         "TABLE_SPACE_SIZE":"1M",
@@ -119,3 +119,7 @@ topology:
 
       persistence:
         enabled: true
+        pv_name: "goldilocks-pv-claim"
+        pvc_name: "goldilocks-pvc-claim"
+        storage: "10Gi"
+        path: "/home/goldilocks"

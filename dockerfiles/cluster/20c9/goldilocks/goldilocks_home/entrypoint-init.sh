@@ -66,7 +66,7 @@ export ODBCINI=/home/sunje/goldilocks_data/$MY_NAMESPACE/$MY_POD_NAME/conf/odbc.
 # Kubernetes stop 없으므로 무조건 삭제 -shw-
 rm -rf /home/sunje/goldilocks_data/$MY_NAMESPACE/$MY_POD_NAME
 mkdir -p /home/sunje/goldilocks_data/$MY_NAMESPACE/$MY_POD_NAME
-mkdir -p /home/sunje/nfs_volumn/$MY_NAMESPACE
+#mkdir -p /home/sunje/nfs_volumn/$MY_NAMESPACE
 export GOLDILOCKS_DATA=/home/sunje/goldilocks_data/$MY_NAMESPACE/$MY_POD_NAME
 cp /home/sunje/goldilocks_data_create/init-data/* /home/sunje/goldilocks_data/$MY_NAMESPACE/$MY_POD_NAME -R
 echo $GOLDILOCKS_DATA

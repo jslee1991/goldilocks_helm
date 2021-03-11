@@ -9,10 +9,10 @@ run_shell:
 stop: 
 	docker kill $(CONTAINER_NAME)-$(CONTAINER_INSTANCE)
 clean:
-	docker rmi sunjesoft/cluster:20c_1_8
+	docker rmi $(NS)/$(IMAGE_NAME):$(VERSION)
 remove:
 	rm /home/son_kube/ymal/goldilocks/goldilocks/goldilocks_data/goldilocks-* -rf
 push:
-	docker push sunjesoft/$(IMAGE_NAME):$(VERSION)
+	docker push $(NS)/$(IMAGE_NAME):$(VERSION)
 version:
 	@echo $(VERSION)

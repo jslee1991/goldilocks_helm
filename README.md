@@ -3,3 +3,5 @@
 * HELM CHART / YAML FILE 등 배포방식 제공
 
 * standalone/ cluster 버전의 각각 dockerfile
+
+* deploy.sh에서 경로를 환경에 맞게 구성

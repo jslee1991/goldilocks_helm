@@ -16,9 +16,7 @@ COPY ./goldilocks/goldilocks_home /home/sunje/goldilocks_home
 COPY ./goldilocks/goldilocks_data /home/sunje/goldilocks_data_create
 
 RUN chown -R sunje:sunje /home/sunje/ \
-    && mkdir -p /home/sunje/nfs_volumn \
     && mkdir -p /home/sunje/goldilocks_data \
-    && chown -R sunje:sunje /home/sunje/nfs_volumn \
     && chown -R sunje:sunje /home/sunje/goldilocks_home \
     && chown -R sunje:sunje /home/sunje/goldilocks_data \
     && chmod 777 -R /home/sunje

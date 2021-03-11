@@ -4,4 +4,4 @@
 
 * standalone/ cluster 버전의 각각 dockerfile
 
-* deploy.sh에서 경로를 환경에 맞게 구성
+* manage.sh에서 경로를 환경에 맞게 구성

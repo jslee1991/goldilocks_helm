@@ -9,7 +9,7 @@ GOLDILOCKS_DATA=/home/sunje/goldilocks_data
 GOLDILOCKS_HOME=/home/sunje/goldilocks_home
 PATH=$PATH:$GOLDILOCKS_HOME/bin
 HOST_IP=$(hostname -I|awk '{print $1}')
-MASTER_IP=10.0.0.10
+MASTER_IP=192.168.10.250
 ### MASTER_IP ... 컨테이너에서는 CLUSTER_IP SERVICE로 받아왔는데..
 ### 클라우드에서는 FLOATING IP로 받아와야 하나..?A
 

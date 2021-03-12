@@ -7,3 +7,5 @@
 * standalone/ cluster 버전의 각각 dockerfile
 
 * manage.sh에서 경로를 환경에 맞게 구성
+
+* openstack(혹은 기타 cloud)에서 자동화 

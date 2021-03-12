@@ -9,7 +9,7 @@ GOLDILOCKS_DATA=/home/sunje/goldilocks_data
 GOLDILOCKS_HOME=/home/sunje/goldilocks_home
 PATH=$PATH:$GOLDILOCKS_HOME/bin
 HOST_IP=$(hostname -I|awk '{print $1}')
-MASTER_IP=10.0.0.10
+MASTER_IP=10.0.0.10  ### 이게 문제...
 GROUP_NAME=`echo ${MEMBER:0:2}`
 MEMBER_NAME=`echo ${MEMBER:2:2}`
 

@@ -11,7 +11,7 @@ PATH=$PATH:$GOLDILOCKS_HOME/bin
 HOST_IP=$(hostname -I|awk '{print $1}')
 MASTER_IP=192.168.10.250
 ### MASTER_IP ... 컨테이너에서는 CLUSTER_IP SERVICE로 받아왔는데..
-### 클라우드에서는 FLOATING IP로 받아와야 하나..?A -> UDP가 안됨
+### FLOATING IP 사용시 SECURITY-GROUP으로 GLOCATOR와 GLOCTL PORT인 42581, 44581 INBOUND를 설정 해주어야 함.
 
 GROUP_NAME=`echo ${MEMBER:0:2}`
 MEMBER_NAME=`echo ${MEMBER:2:2}`

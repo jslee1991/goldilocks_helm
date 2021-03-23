@@ -14,12 +14,13 @@ sh 01.create-configmap.sh
 ```sh 
 cd chart 
 
-helm install goldilocks --namespace goldilocks . 
+helm install goldilocks --namespace <namespace> <PATH>
 
 
 kubectl exec -it goldilocks-0 bash 
 
 gsql sys gliese --as sysdba
+(if replica = 2)
 gSQL> select * from x$instance;
 
 VERSION                            STARTUP_TIME               STATUS OS_USER_ID IS_CLUSTER LOCAL_GROUP_ID LOCAL_MEMBER_ID LOCAL_MEMBER_NAME LOCAL_MEMBER_POSITION

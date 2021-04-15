@@ -8,7 +8,7 @@ resource "openstack_compute_instance_v2" "i01" {
   user_data   = file("/home/sunje/install.sh")
   
   provisioner "local-exec" {
-    command = "echo 'tf-2.bar sleeping for 50 seconds' && sleep 50"
+    command = "echo 'tf-2.bar sleeping for 60 seconds' && sleep 60"
   }
 
   network {
@@ -25,7 +25,7 @@ resource "openstack_compute_instance_v2" "i02" {
   security_groups = ["default"]
   user_data   = file("/home/sunje/install.sh")
   provisioner "local-exec" {
-    command = "echo 'tf-2.bar sleeping for 30 seconds' && sleep 30"
+    command = "echo 'tf-2.bar sleeping for 40 seconds' && sleep 40"
   }
 
   network {
@@ -42,7 +42,7 @@ resource "openstack_compute_instance_v2" "i03" {
   security_groups = ["default"]
   user_data   = file("/home/sunje/install.sh")
   provisioner "local-exec" {
-    command = "echo 'tf-2.bar sleeping for 30 seconds' && sleep 30"
+    command = "echo 'tf-2.bar sleeping for 40 seconds' && sleep 40"
   }
 
   network {
@@ -59,7 +59,7 @@ resource "openstack_compute_instance_v2" "i04" {
   security_groups = ["default"]
   user_data   = file("/home/sunje/install.sh")
   provisioner "local-exec" {
-    command = "echo 'tf-2.bar sleeping for 30 seconds' && sleep 30"
+    command = "echo 'tf-2.bar sleeping for 40 seconds' && sleep 40"
   }
 
   network {
@@ -68,7 +68,7 @@ resource "openstack_compute_instance_v2" "i04" {
 }
 
 resource "openstack_compute_instance_v2" "i05" {
-  depends_on = ["openstack_compute_instance_v2.i04"]
+#  depends_on = ["openstack_compute_instance_v2.i04"]
   name            = "G3N1"
   image_id        = "d2e405fa-41d1-4869-8420-f596d42af5d3"
   flavor_id       = "3"
@@ -76,7 +76,7 @@ resource "openstack_compute_instance_v2" "i05" {
   security_groups = ["default"]
   user_data   = file("/home/sunje/install.sh")
   provisioner "local-exec" {
-    command = "echo 'tf-2.bar sleeping for 30 seconds' && sleep 30"
+    command = "echo 'tf-2.bar sleeping for 40 seconds' && sleep 40"
   }
 
   network {
@@ -85,7 +85,7 @@ resource "openstack_compute_instance_v2" "i05" {
 }
 
 resource "openstack_compute_instance_v2" "i06" {
-  depends_on = ["openstack_compute_instance_v2.i05"]
+#  depends_on = ["openstack_compute_instance_v2.i05"]
   name            = "G3N2"
   image_id        = "d2e405fa-41d1-4869-8420-f596d42af5d3"
   flavor_id       = "3"
@@ -93,13 +93,48 @@ resource "openstack_compute_instance_v2" "i06" {
   security_groups = ["default"]
   user_data   = file("/home/sunje/install.sh")
   provisioner "local-exec" {
-    command = "echo 'tf-2.bar sleeping for 30 seconds' && sleep 30"
+    command = "echo 'tf-2.bar sleeping for 40 seconds' && sleep 40"
   }
 
   network {
     name = "private_network"
   }
 }
+
+resource "openstack_compute_instance_v2" "i07" {
+#  depends_on = ["openstack_compute_instance_v2.i04"]
+  name            = "G4N1"
+  image_id        = "d2e405fa-41d1-4869-8420-f596d42af5d3"
+  flavor_id       = "4"
+  key_pair        = "tech_team2"
+  security_groups = ["default"]
+  user_data   = file("/home/sunje/install.sh")
+  provisioner "local-exec" {
+    command = "echo 'tf-2.bar sleeping for 40 seconds' && sleep 40"
+  }
+
+  network {
+    name = "private_network"
+  }
+}
+
+resource "openstack_compute_instance_v2" "i08" {
+  depends_on = ["openstack_compute_instance_v2.i07"]
+  name            = "G4N2"
+  image_id        = "d2e405fa-41d1-4869-8420-f596d42af5d3"
+  flavor_id       = "4"
+  key_pair        = "tech_team2"
+  security_groups = ["default"]
+  user_data   = file("/home/sunje/install.sh")
+  provisioner "local-exec" {
+    command = "echo 'tf-2.bar sleeping for 40 seconds' && sleep 40"
+  }
+
+  network {
+    name = "private_network"
+  }
+}
+
 
 
 resource "openstack_compute_floatingip_associate_v2" "fip" {

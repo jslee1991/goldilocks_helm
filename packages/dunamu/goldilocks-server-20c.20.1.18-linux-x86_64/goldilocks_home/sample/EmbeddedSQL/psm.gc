@@ -1,0 +1,413 @@
+/*
+ * sample5.gc
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+EXEC SQL INCLUDE SQLCA;
+
+#define  SUCCESS  0
+#define  FAILURE  -1
+
+#define  PRINT_SQL_ERROR(aMsg)                                      \
+    {                                                               \
+        printf("\n");                                               \
+        printf(aMsg);                                               \
+        printf("\nSQLCODE : %d\nSQLSTATE : %s\nERROR MSG : %s\n",   \
+               sqlca.sqlcode,                                       \
+               SQLSTATE,                                            \
+               sqlca.sqlerrm.sqlerrmc );                            \
+    }
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword);
+int CreateTable();
+int DropTable();
+
+int main(int argc, char **argv)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    int         sStatus = 0;
+    VARCHAR     sMsg[1024];
+
+    int          sV1;
+    EXEC SQL END DECLARE SECTION;
+
+    int          state = 0;
+
+    printf("Connect GOLDILOCKS ...\n");
+    if(Connect("DSN=GOLDILOCKS", "test", "test") != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    if(CreateTable() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+    state = 1;
+
+    EXEC SQL DROP PROCEDURE IF EXISTS PROC1;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    EXEC SQL DROP FUNCTION IF EXISTS FUNC1;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    EXEC SQL CALL DBMS_OUTPUT.ENABLE( 100 );
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+
+    /***********************************************
+     * Anonymous Block : Function
+     **********************************************/
+    EXEC SQL EXECUTE
+        DECLARE
+          V1 INTEGER := 0;
+          FUNCTION FUNC1( A1 INTEGER )
+            RETURN INTEGER
+            IS
+            BEGIN
+              RETURN A1 * 10;
+            END;
+        BEGIN
+          V1 := FUNC1( 10 );
+          DBMS_OUTPUT.PUT_LINE( 'V1 = ' || V1 );
+        END;
+    END-EXEC;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    sMsg.len = 0;
+    EXEC SQL CALL DBMS_OUTPUT.GET_LINE( :sMsg, :sStatus );
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+    sMsg.arr[sMsg.len] = 0x00;
+    printf("Anonymous Block - Function : [%s]\n", sMsg.arr);
+
+    /***********************************************
+     * Anonymous Block : Procedure
+     **********************************************/
+    EXEC SQL EXECUTE
+        DECLARE
+          PROCEDURE PROC1( A1 INTEGER )
+          IS
+          BEGIN
+            DBMS_OUTPUT.PUT_LINE( 'A1 = ' || A1 );
+          END;
+        BEGIN
+          PROC1( 30 );
+        END;
+    END-EXEC;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    sMsg.len = 0;
+    EXEC SQL CALL DBMS_OUTPUT.GET_LINE( :sMsg, :sStatus );
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+    sMsg.arr[sMsg.len] = 0x00;
+    printf("Anonymous Block - Procedure : [%s]\n", sMsg.arr);
+
+
+
+    /***********************************************
+     * Function
+     **********************************************/
+    EXEC SQL
+        CREATE FUNCTION FUNC1( A1 INTEGER, A2 INTEGER )
+          RETURN INTEGER
+          IS
+            V1 INTEGER;
+          BEGIN
+
+            SELECT COUNT(*)
+              INTO V1
+              FROM T1
+              WHERE T1.I1 >= A1 AND T1.I1 <= A2;
+
+            RETURN V1;
+          END;
+    END-EXEC;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+    state = 2;
+
+    EXEC SQL CALL FUNC1( 2, 4 ) INTO :sV1;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+    printf("Function : [%d]\n", sV1);
+
+    /***********************************************
+     * Procedure
+     **********************************************/
+    EXEC SQL
+        CREATE PROCEDURE PROC1( A1 INTEGER, A2 INTEGER )
+          IS
+            V1 INTEGER;
+          BEGIN
+        
+            SELECT COUNT(*)
+              INTO V1
+              FROM T1
+              WHERE T1.I1 >= A1 AND T1.I1 <= A2;
+
+            DBMS_OUTPUT.PUT_LINE( 'V1 = ' || V1 );
+          END;
+    END-EXEC;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+    state = 3;
+
+    EXEC SQL CALL PROC1( 2, 4 );
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    sMsg.len = 0;
+    EXEC SQL CALL DBMS_OUTPUT.GET_LINE( :sMsg, :sStatus );
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+    sMsg.arr[sMsg.len] = 0x00;
+    printf("Procedure : [%s]\n", sMsg.arr);
+
+    EXEC SQL DROP PROCEDURE PROC1;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+    state = 2;
+
+    EXEC SQL DROP FUNCTION FUNC1;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+    state = 1;
+
+
+    state = 0;
+    if(DropTable() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK RELEASE;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    printf("\n\nSUCCESS\n");
+    printf("############################\n");
+
+    return 0;
+
+  fail_exit:
+
+    printf("\n\nFAILURE\n");
+    printf("############################\n\n");
+
+    switch( state )
+    {
+        case 3:
+            EXEC SQL DROP PROCEDURE PROC1;
+            break;
+        case 2:
+            EXEC SQL DROP FUNCTION FUNC1;
+            break;
+        case 1:
+            (void)DropTable();
+            break;
+        default:
+            break;
+    }
+
+    EXEC SQL ROLLBACK WORK RELEASE;
+
+    return 0;
+}
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    VARCHAR  sUid[80];
+    VARCHAR  sPwd[20];
+    VARCHAR  sConnStr[1024];
+    EXEC SQL END DECLARE SECTION;
+
+    /*----------------------------------------------
+      Log on GOLDILOCKS
+      ------------------------------------------------*/
+    strcpy((char *)sUid.arr, aUserID);
+    sUid.len = (short)strlen((char *)sUid.arr);
+    strcpy((char *)sPwd.arr, sPassword);
+    sPwd.len = (short)strlen((char *)sPwd.arr);
+    strcpy((char *)sConnStr.arr, aHostInfo);
+    sConnStr.len = (short)strlen((char *)sConnStr.arr);
+
+    /* DB 연결 */
+    EXEC SQL CONNECT :sUid IDENTIFIED BY :sPwd USING :sConnStr;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] Connection Failure!");
+
+    return FAILURE;
+}
+
+int CreateTable()
+{
+    /*----------------------------------------------
+      Create Table
+      ------------------------------------------------*/
+    EXEC SQL DROP TABLE IF EXISTS T1;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL
+        CREATE TABLE T1 (
+            I1 INTEGER );
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL INSERT INTO T1 VALUES( 1 );
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL INSERT INTO T1 VALUES( 2 );
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL INSERT INTO T1 VALUES( 3 );
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL INSERT INTO T1 VALUES( 4 );
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL INSERT INTO T1 VALUES( 5 );
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    EXEC SQL ROLLBACK WORK;
+
+    return FAILURE;
+}
+
+int DropTable()
+{
+    /*----------------------------------------------
+      Drop Table
+      ------------------------------------------------*/
+    EXEC SQL DROP TABLE T1;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    EXEC SQL ROLLBACK WORK;
+
+    return FAILURE;
+}

@@ -1,0 +1,167 @@
+/*
+ * fetch_struct_array.gc
+ *  : structure array fetch
+ *  : structure indicators
+ *  : mix structure, scalar variable
+ *  : sqlca.sqlerrd[2]
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+EXEC SQL INCLUDE SQLCA;
+
+#define  SUCCESS  0
+#define  FAILURE  -1
+
+#define  PRINT_SQL_ERROR(aMsg)                                      \
+    {                                                               \
+        printf("\n");                                               \
+        printf(aMsg);                                               \
+        printf("\nSQLCODE : %d\nSQLSTATE : %s\nERROR MSG : %s\n",   \
+               sqlca.sqlcode,                                       \
+               SQLSTATE,                                            \
+               sqlca.sqlerrm.sqlerrmc );                            \
+    }
+
+
+EXEC SQL BEGIN DECLARE SECTION;
+typedef struct rsEmp
+{
+    int          mEmpNo;
+    varchar      mEName[20 + 1];
+} rsEmp;
+EXEC SQL END DECLARE SECTION;
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword);
+
+int main(int argc, char **argv)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    rsEmp     sEmp[5];
+    char      sJob[5][20 + 1];
+    long      sSalary[5];
+    EXEC SQL END DECLARE SECTION;
+
+    int  sRecordCount = 0;
+    int  i;
+
+    printf("Connect GOLDILOCKS ...\n");
+    if(Connect("DSN=GOLDILOCKS", "test", "test") != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    /***********************************************
+     * Retrieve employee
+     **********************************************/
+    EXEC SQL
+        DECLARE EMP_CUR CURSOR FOR
+        SELECT empno, ename, job, sal
+        FROM   EMP
+        ORDER BY EMPNO;
+
+    EXEC SQL OPEN EMP_CUR;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    printf(" EMPNO    ENAME                JOB      SALARY\n");
+    printf("====== ==================== ========== ========\n");
+
+    while( 1 )
+    {
+        EXEC SQL
+            FETCH EMP_CUR
+            INTO  :sEmp, :sJob, :sSalary;
+
+        if(sqlca.sqlcode == SQL_NO_DATA)
+        {
+            break;
+        }
+        else if(sqlca.sqlcode != 0)
+        {
+            PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+            goto fail_exit;
+        }
+
+        sRecordCount += sqlca.sqlerrd[2];
+
+        for( i = 0; i < sqlca.sqlerrd[2]; i ++ )
+        {
+            printf("%6d %20s %10s %8ld\n",
+                   sEmp[i].mEmpNo, sEmp[i].mEName.arr, sJob[i], sSalary[i]);
+        }
+    }
+
+    printf("====== ==================== ========== ========\n");
+    printf("Record Count = %d\n", sRecordCount);
+    printf("====== ==================== ========== ========\n");
+
+    EXEC SQL CLOSE EMP_CUR;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK RELEASE;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    printf("\n\nSUCCESS\n");
+    printf("############################\n");
+
+    return 0;
+
+  fail_exit:
+
+    printf("\n\nFAILURE\n");
+    printf("############################\n\n");
+
+    EXEC SQL ROLLBACK WORK RELEASE;
+
+    return 0;
+}
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    VARCHAR  sUid[80];
+    VARCHAR  sPwd[20];
+    VARCHAR  sConnStr[1024];
+    EXEC SQL END DECLARE SECTION;
+
+    /*----------------------------------------------
+      Log on GOLDILOCKS
+      ------------------------------------------------*/
+    strcpy((char *)sUid.arr, aUserID);
+    sUid.len = (short)strlen((char *)sUid.arr);
+    strcpy((char *)sPwd.arr, sPassword);
+    sPwd.len = (short)strlen((char *)sPwd.arr);
+    strcpy((char *)sConnStr.arr, aHostInfo);
+    sConnStr.len = (short)strlen((char *)sConnStr.arr);
+
+    /* DB 연결 */
+    EXEC SQL CONNECT :sUid IDENTIFIED BY :sPwd USING :sConnStr;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] Connection Failure!");
+
+    return FAILURE;
+}
+

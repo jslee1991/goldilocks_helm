@@ -122,7 +122,7 @@ topology:
         pv_name: "goldilocks-pv-claim"
         pvc_name: "goldilocks-pvc-claim"
         storage: "10Gi"
-        path: "/home/goldilocks"
+        path: "/data"
         
 ########################################################################################################################
 # 기본적으로 topology는 topology goldilocks 를참조합니다.

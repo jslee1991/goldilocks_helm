@@ -3,3 +3,5 @@
 --# gsql global login "site profile" file
 --#
 --#######################################
+
+set linesize 2048;

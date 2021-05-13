@@ -18,7 +18,7 @@ RemoveIPC=no
 
 # systemctl restart systemd-logind.service
 
-useradd sunje
+useradd sunje -d /home/sunje -m -s /bin/bash
 passwd sunje  (sunje)
 su - sunje
 tar -xvf goldilocks_package

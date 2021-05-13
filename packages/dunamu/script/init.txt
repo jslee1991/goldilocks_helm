@@ -5,6 +5,11 @@ kernel.shmmni = 4096
 kernel.shmall = 201326592
 kernel.sem = 250 32000 100 128
 
+net.ipv4.tcp_keepalive_time = 3
+net.ipv4.tcp_keepalive_probes = 3
+net.ipv4.tcp_keepalive_intvl = 3
+net.ipv4.tcp_retries2 = 5
+
 sysctl -p
 
 # vi /etc/systemd/logind.conf
@@ -19,8 +24,8 @@ su - sunje
 tar -xvf goldilocks_package
 vi ~/.bash_profile
 {{{
-export GOLDILOCKS_DATA=/product/goldilocks_data
-export GOLDILOCKS_HOME=/product/goldilocks_home
+export GOLDILOCKS_DATA=/home/sunje/product/goldilocks_data
+export GOLDILOCKS_HOME=/home/sunje/product/goldilocks_home
 export PATH=$GOLDILOCKS_HOME/bin:$PATH
 }}}
 cp property $GOLDILOCKS_DATA/conf/goldilocks.properties.conf
@@ -32,15 +37,17 @@ vi ~/.odbc.ini
 HOST=127.0.0.1
 PORT=22581
 [G1N1]
-HOST=""   #G1N1의 IP입력
+HOST=""   
+#G1N1의 IP입력
 PORT=22581
 }}}
 
 vi /home/sunje/install.sh
 {{{
 #!/bin/bash
-MEMBER=""자기 MEMBER이름 입력
-HOST="" #자기 IP입력
+MEMBER=""
+HOST="" 
+# 자기 이름과 멤버이름 입력 소문자
 
 #############PROFILE#####################=
 GOLDILOCKS_DATA=/home/sunje/goldilocks_data

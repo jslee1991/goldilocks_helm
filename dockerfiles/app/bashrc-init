@@ -1,0 +1,32 @@
+# .bashrc
+
+# Source global definitions
+if [ -f /etc/bashrc ]; then
+        . /etc/bashrc
+fi
+
+# Uncomment the following line if you don't like systemctl's auto-paging feature:
+# export SYSTEMD_PAGER=
+
+# User specific aliases and functions
+
+MY_NAMESPACE=`echo $(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace)`
+
+export GOLDILOCKS_HOME=$HOME/goldilocks_home
+export PATH=$GOLDILOCKS_HOME/bin:$PATH
+export LD_LIBRARY_PATH=$GOLDILOCKS_HOME/lib:$LD_LIBRARY_PATH
+
+
+PS1=`hostname`:'$PWD] '
+set -o vi
+stty erase ^H
+
+alias gst='gsqlnet test test'
+
+ulimit -n 4096
+ulimit -u 4096
+
+echo "------start:bashrc------"
+echo $GOLDILOCKS_HOME
+echo $GOLDILOCKS_DATA
+echo "------end:bashrc--------"

@@ -1,0 +1,384 @@
+--###################################################
+--# ALTER TABLE .. ALTER COLUMN : with <set column default clause>
+--###################################################
+
+--# result: success
+DROP TABLE IF EXISTS t1;
+COMMIT;
+
+
+--# result: success
+CREATE TABLE t1 
+( 
+    id     NUMBER
+  , name   VARCHAR(128) 
+  , addr   VARCHAR(1024)
+);
+COMMIT;
+
+
+--# result: success
+INSERT INTO t1 VALUES ( DEFAULT, DEFAULT, DEFAULT );
+COMMIT;
+
+--# result: 1 row
+--#     null   null   null
+SELECT * FROM t1;
+
+
+
+--# result: success
+ALTER TABLE t1 ALTER COLUMN name SET DEFAULT 'anonymous';
+COMMIT;
+
+--# result: success
+ALTER TABLE t1 ALTER COLUMN addr SET DEFAULT 'N/A';
+COMMIT;
+
+
+
+--# result: success
+INSERT INTO t1 VALUES ( DEFAULT, DEFAULT, DEFAULT );
+COMMIT;
+
+--# result: 2 rows
+--#     null   null        null
+--#     null   anonymous   N/A
+SELECT * FROM t1;
+
+
+
+--# result: success
+DROP TABLE t1;
+COMMIT;
+
+
+
+--###################################################
+--# ALTER TABLE .. ALTER COLUMN : with <drop column default clause>
+--###################################################
+
+--# result: success
+DROP TABLE IF EXISTS t1;
+COMMIT;
+
+
+--# result: success
+CREATE TABLE t1 
+( 
+    id     NUMBER
+  , name   VARCHAR(128)    DEFAULT 'anonymous'
+  , addr   VARCHAR(1024)   DEFAULT 'N/A'
+);
+COMMIT;
+
+
+
+--# result: success
+INSERT INTO t1 VALUES ( DEFAULT, DEFAULT, DEFAULT );
+COMMIT;
+
+--# result: 1 rows
+--#     null   anonymous   N/A
+SELECT * FROM t1;
+
+
+
+--# result: success
+ALTER TABLE t1 ALTER COLUMN name DROP DEFAULT;
+COMMIT;
+
+--# result: success
+ALTER TABLE t1 ALTER COLUMN addr DROP DEFAULT;
+COMMIT;
+
+
+
+
+--# result: success
+INSERT INTO t1 VALUES ( DEFAULT, DEFAULT, DEFAULT );
+COMMIT;
+
+--# result: 2 rows
+--#     null   anonymous   N/A
+--#     null   null        null
+SELECT * FROM t1;
+
+
+
+--# result: success
+DROP TABLE t1;
+COMMIT;
+
+
+
+--###################################################
+--# ALTER TABLE .. ALTER COLUMN : with <set column not null clause>
+--###################################################
+
+--# result: success
+DROP TABLE IF EXISTS t1;
+COMMIT;
+
+
+--# result: success
+CREATE TABLE t1 
+( 
+    id     NUMBER
+  , name   VARCHAR(128)
+  , addr   VARCHAR(1024)
+);
+COMMIT;
+
+
+
+--# result: success
+ALTER TABLE t1 ALTER COLUMN id SET NOT NULL;
+COMMIT;
+
+
+--# result: success
+DROP TABLE t1;
+COMMIT;
+
+
+--###################################################
+--# ALTER TABLE .. ALTER COLUMN : with NOT NULL <constraint characteristics>
+--###################################################
+
+--# result: success
+DROP TABLE IF EXISTS t1;
+COMMIT;
+
+
+--# result: success
+CREATE TABLE t1 
+( 
+    id     NUMBER
+  , name   VARCHAR(128)
+  , addr   VARCHAR(1024)
+);
+COMMIT;
+
+
+
+--# result: success
+ALTER TABLE t1 ALTER COLUMN id 
+               SET CONSTRAINT t1_nn NOT NULL 
+               DEFERRABLE INITIALLY IMMEDIATE;
+COMMIT;
+
+
+--# result: success
+DROP TABLE t1;
+COMMIT;
+
+
+
+--###################################################
+--# ALTER TABLE .. ALTER COLUMN : with <drop column not null clause>
+--###################################################
+
+--# result: success
+DROP TABLE IF EXISTS t1;
+COMMIT;
+
+
+--# result: success
+CREATE TABLE t1 
+( 
+    id     NUMBER           NOT NULL
+  , name   VARCHAR(128)
+  , addr   VARCHAR(1024)
+);
+COMMIT;
+
+
+
+--# result: success
+ALTER TABLE t1 ALTER COLUMN id DROP NOT NULL;
+COMMIT;
+
+
+--# result: success
+DROP TABLE t1;
+COMMIT;
+
+
+
+--###################################################
+--# ALTER TABLE .. ALTER COLUMN : with <alter column data type clause>
+--###################################################
+
+--# result: success
+DROP TABLE IF EXISTS t1;
+COMMIT;
+
+
+--# result: success
+CREATE TABLE t1 
+( 
+    id     INTEGER          
+  , name   VARCHAR(128)
+  , tax    NUMERIC(12,2)
+);
+COMMIT;
+
+
+--# result: success
+ALTER TABLE t1 ALTER COLUMN id SET DATA TYPE BIGINT;
+COMMIT;
+
+
+--# result: success
+ALTER TABLE t1 ALTER COLUMN name SET DATA TYPE VARCHAR(256);
+COMMIT;
+
+--# result: success
+ALTER TABLE t1 ALTER COLUMN tax SET DATA TYPE NUMERIC(20,5);
+COMMIT;
+
+
+--# result: success
+DROP TABLE t1;
+COMMIT;
+
+
+--###################################################
+--# ALTER TABLE .. ALTER COLUMN : with <alter identity column specification>
+--###################################################
+
+--# result: success
+DROP TABLE IF EXISTS t1;
+COMMIT;
+
+
+--# result: success
+CREATE TABLE t1 
+( 
+    id     INTEGER          GENERATED ALWAYS AS IDENTITY
+  , name   VARCHAR(128)
+);
+COMMIT;
+
+
+--# result: 1 row
+INSERT INTO t1 VALUES ( DEFAULT, 'leekmo' );
+COMMIT;
+
+--# result: 1 row
+INSERT INTO t1( name ) VALUES ( 'mkkim' );
+COMMIT;
+
+
+--# result: 2 rows
+--#      1   leekmo
+--#      2   mkkim
+SELECT * FROM t1;
+
+
+
+
+--# result: success
+ALTER TABLE t1 ALTER COLUMN id SET GENERATED BY DEFAULT;
+COMMIT;
+
+
+
+--# result: 1 row
+INSERT INTO t1 VALUES ( DEFAULT, 'ehpark' );
+COMMIT;
+
+--# result: 1 row
+INSERT INTO t1 VALUES ( 100, 'xcom73' );
+COMMIT;
+
+
+
+--# result: 4 rows
+--#      1   leekmo
+--#      2   mkkim
+--#      3   ehpark
+--#    100   xcom73
+SELECT * FROM t1;
+
+
+
+
+--# result: success
+ALTER TABLE t1 ALTER COLUMN id RESTART;
+COMMIT;
+
+
+
+--# result: 1 row
+INSERT INTO t1 VALUES ( DEFAULT, 'egonspace' );
+COMMIT;
+
+
+--# result: 1 row
+INSERT INTO t1 VALUES ( DEFAULT, 'mycomman' );
+COMMIT;
+
+
+
+--# result: 6 rows
+--#      1   leekmo
+--#      2   mkkim
+--#      3   ehpark
+--#    100   xcom73
+--#      1   egonspace
+--#      2   mycomman
+SELECT * FROM t1;
+
+
+--# result: success
+DROP TABLE t1;
+COMMIT;
+
+
+
+--###################################################
+--# ALTER TABLE .. ALTER COLUMN : with <drop identity property clause>
+--###################################################
+
+--# result: success
+DROP TABLE IF EXISTS t1;
+COMMIT;
+
+
+--# result: success
+CREATE TABLE t1 
+( 
+    id     INTEGER          GENERATED BY DEFAULT AS IDENTITY
+  , name   VARCHAR(128)
+);
+COMMIT;
+
+
+
+--# result: success
+ALTER TABLE t1 ALTER COLUMN id DROP IDENTITY;
+COMMIT;
+
+
+
+--# result: 1 row
+INSERT INTO t1 VALUES ( DEFAULT, 'leekmo' );
+COMMIT;
+
+--# result: 1 row
+INSERT INTO t1 VALUES ( 100, 'mkkim' );
+COMMIT;
+
+
+
+--# result: 2 rows
+--#    null   leekmo
+--#     100   mkkim
+SELECT * FROM t1;
+
+
+--# result: success
+DROP TABLE t1;
+COMMIT;

@@ -1,0 +1,363 @@
+/*
+ * overview.gc
+ *
+ * Connect / Disconnect
+ * DDL(Create/Drop table)
+ * Basic DML(Insert, Delete, Update)
+ * Standing Cursor
+ */
+EXEC SQL INCLUDE SQLCA;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define  SUCCESS  0
+#define  FAILURE  -1
+
+#define  PRINT_SQL_ERROR(aMsg)                                      \
+    {                                                               \
+        printf("\n");                                               \
+        printf(aMsg);                                               \
+        printf("\nSQLCODE : %d\nSQLSTATE : %s\nERROR MSG : %s\n",   \
+               sqlca.sqlcode,                                       \
+               SQLSTATE,                                            \
+               sqlca.sqlerrm.sqlerrmc );                            \
+    }
+
+EXEC SQL BEGIN DECLARE SECTION;
+typedef struct rsEmpRecord
+{
+    int      mEmpNo;
+    char     mEName[20];
+    char     mDept[10];
+} rsEmpRecord;
+
+rsEmpRecord gRecord[10] = {
+    { 1, "Park", "RND" },
+    { 2, "Kim", "CEO" },
+    { 3, "Choi", "SALES" },
+    { 4, "Lee", "CTO" },
+    { 5, "Lyu", "RND" },
+    { 6, "Ohn", "SUPPORT" },
+    { 7, "Cheon", "RND" },
+    { 8, "Sohn", "SALES" },
+    { 9, "Smith", "WAIT" },
+    { 10, "mycomman", "WAIT" }
+};
+EXEC SQL END DECLARE SECTION;
+
+int CreateEmpTable();
+int DropEmpTable();
+int Connect(char *aHostInfo, char *aUserID, char *sPassword);
+int Disconnect();
+int PrintRecord();
+
+int main(int argc, char **argv)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    int          sEmpNo;
+    char         sDept[10 + 1];
+    EXEC SQL END DECLARE SECTION;
+    int  sState = 0;
+
+    printf("Connect GOLDILOCKS ...\n");
+    if(Connect("DSN=GOLDILOCKS", "test", "test") != SUCCESS)
+    {
+        goto fail_exit;
+    }
+    sState = 1;
+
+    printf("Create SEMP table ...\n");
+    if(CreateEmpTable() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+    sState = 2;
+
+    printf("Insert record ...\n");
+    EXEC SQL
+        INSERT INTO SEMP(empno, ename, dept)
+        VALUES(:gRecord);
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+    printf("====== ==================== ==========\n");
+    printf("%d Record Inserted\n", sqlca.sqlerrd[2]);
+    printf("====== ==================== ==========\n");
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    printf("Current record\n");
+    PrintRecord();
+
+    sEmpNo = 9;
+    printf("Delete record WHERE empno == %d\n", sEmpNo);
+    EXEC SQL
+        DELETE FROM SEMP
+        WHERE  empno = :sEmpNo;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    printf("After Delete record\n");
+    PrintRecord();
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    strcpy( sDept, "RND" );
+    printf("Update record WHERE dept == 'WAIT'\n");
+    EXEC SQL
+        UPDATE SEMP
+        SET    dept = :sDept
+        WHERE  dept = 'WAIT';
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    printf("After Update record\n");
+    PrintRecord();
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    sState = 1;
+    printf("Drop SEMP table ...\n");
+    if(DropEmpTable() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    sState = 0;
+    printf("Disconnect GOLDILOCKS ...\n");
+    if(Disconnect() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    printf("SUCCESS\n");
+    printf("############################\n");
+
+    return 0;
+
+  fail_exit:
+
+    printf("FAILURE\n");
+    printf("############################\n\n");
+
+    EXEC SQL ROLLBACK WORK;
+
+    switch(sState)
+    {
+        case 2:
+            printf("Drop SEMP table ...\n");
+            (void)DropEmpTable();
+        case 1:
+            printf("Disconnect GOLDILOCKS ...\n");
+            (void)Disconnect();
+            break;
+        default:
+            break;
+    }
+
+    return 0;
+}
+
+int CreateEmpTable()
+{
+    /*----------------------------------------------
+      Create Table
+      ------------------------------------------------*/
+    EXEC SQL DROP TABLE IF EXISTS SEMP;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL CREATE TABLE SEMP ( empno        INTEGER,
+                                 ename        VARCHAR(20),
+                                 dept         VARCHAR(10),
+                                 PRIMARY KEY (empno) );
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    EXEC SQL ROLLBACK WORK;
+
+    return FAILURE;
+}
+
+int DropEmpTable()
+{
+    /*----------------------------------------------
+      Drop Table
+      ------------------------------------------------*/
+    EXEC SQL DROP TABLE SEMP;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    EXEC SQL ROLLBACK WORK;
+
+    return FAILURE;
+}
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    VARCHAR  sUid[80];
+    VARCHAR  sPwd[20];
+    VARCHAR  sConnStr[1024];
+    EXEC SQL END DECLARE SECTION;
+
+    /*----------------------------------------------
+      Log on GOLDILOCKS
+      ------------------------------------------------*/
+    strcpy((char *)sUid.arr, aUserID);
+    sUid.len = (short)strlen((char *)sUid.arr);
+    strcpy((char *)sPwd.arr, sPassword);
+    sPwd.len = (short)strlen((char *)sPwd.arr);
+    strcpy((char *)sConnStr.arr, aHostInfo);
+    sConnStr.len = (short)strlen((char *)sConnStr.arr);
+
+    /* DB 연결 */
+    EXEC SQL CONNECT :sUid IDENTIFIED BY :sPwd USING :sConnStr;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] Connection Failure!");
+
+    return FAILURE;
+}
+
+int Disconnect()
+{
+    EXEC SQL DISCONNECT;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] [ERROR] Disconnect Failure!");
+
+    return FAILURE;
+}
+
+int PrintRecord()
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    rsEmpRecord sResultRecord;
+    EXEC SQL END DECLARE SECTION;
+
+    int   sRecordCount = 0;
+
+    EXEC SQL
+        DECLARE RECORD_CUR1 CURSOR FOR
+        SELECT   empno, ename, dept
+        FROM     SEMP
+        ORDER BY empno;
+
+    EXEC SQL OPEN RECORD_CUR1;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    printf(" EMPNO    ENAME               DEPT\n");
+    printf("====== ==================== ==========\n");
+
+    while( 1 )
+    {
+        EXEC SQL FETCH RECORD_CUR1 INTO :sResultRecord;
+
+        if(sqlca.sqlcode == SQL_NO_DATA)
+        {
+            break;
+        }
+        else if(sqlca.sqlcode != 0)
+        {
+            goto fail_exit;
+        }
+
+        sRecordCount ++;
+
+        printf("%6d %20s %10s\n",
+               sResultRecord.mEmpNo,
+               sResultRecord.mEName,
+               sResultRecord.mDept);
+    }
+
+    printf("====== ==================== ==========\n");
+    printf("Record Count = %d\n", sRecordCount);
+    printf("====== ==================== ==========\n");
+
+    EXEC SQL CLOSE RECORD_CUR1;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    return FAILURE;
+}

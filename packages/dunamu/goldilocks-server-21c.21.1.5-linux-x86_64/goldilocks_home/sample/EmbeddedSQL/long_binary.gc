@@ -1,0 +1,322 @@
+EXEC SQL INCLUDE SQLCA;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define  SUCCESS  0
+#define  FAILURE  -1
+
+#define  PRINT_SQL_ERROR(aMsg)                                      \
+    {                                                               \
+        printf("\n");                                               \
+        printf(aMsg);                                               \
+        printf("\nSQLCODE : %d\nSQLSTATE : %s\nERROR MSG : %s\n",   \
+               sqlca.sqlcode,                                       \
+               SQLSTATE,                                            \
+               sqlca.sqlerrm.sqlerrmc );                            \
+    }
+
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword);
+int Disconnect();
+int CreateTable();
+int DropTable();
+
+int MakeLongVarBinary(SQLCHAR *aBuf, unsigned long long aBufLen, int aSeed)
+{
+    unsigned long long   i;
+
+    for(i = 0; i < aBufLen; i ++)
+    {
+        aBuf[i] = ( aSeed + i ) % 128;
+    }
+
+    return SUCCESS;
+}
+
+int main(int   argc,
+         char  **argv)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    typedef struct typeRow
+    {
+        int                mNo;
+        LONGVARBINARY      mLongVarBinary;
+    } typeRow;
+
+    typedef struct typeRowInd
+    {
+        int                mNoInd;
+        long long          mLongVarBinaryInd;
+    } typeRowInd;
+
+    typeRow            sInputRecord;
+    typeRow            sResultRecord;
+    typeRowInd         sInd;
+    EXEC SQL END DECLARE SECTION;
+    int  sBufLen = 1024 * 128;
+    int  sState = 0;
+
+    printf("#### LONGVARBINARY Insert Test ####\n");
+
+    printf("Connect GOLDILOCKS ...\n");
+    if(Connect("DSN=GOLDILOCKS", "test", "test") != SUCCESS)
+    {
+        goto fail_exit;
+    }
+    sState = 1;
+
+    printf("Create table ...\n");
+    if(CreateTable() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+    sState = 2;
+
+    printf("Insert record ...\n");
+    sInputRecord.mNo = 1;
+    sInputRecord.mLongVarBinary.len = sBufLen;
+    sInputRecord.mLongVarBinary.arr = (SQLCHAR *)malloc(sBufLen);
+    sInd.mNoInd = 0;
+    sInd.mLongVarBinaryInd = sBufLen;
+    if( sInputRecord.mLongVarBinary.arr == NULL )
+    {
+        goto fail_exit;
+    }
+    sState = 3;
+    memset(sInputRecord.mLongVarBinary.arr, 0x00, sBufLen);
+
+    MakeLongVarBinary( sInputRecord.mLongVarBinary.arr, sBufLen, 0x31 );
+
+    EXEC SQL
+        INSERT INTO TEST_T1(C1, C2)
+        VALUES(:sInputRecord :sInd);
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    printf("Retrieve record\n");
+    sResultRecord.mLongVarBinary.len = sBufLen;
+    sResultRecord.mLongVarBinary.arr = (SQLCHAR *)malloc(sBufLen);
+    if( sResultRecord.mLongVarBinary.arr == NULL )
+    {
+        goto fail_exit;
+    }
+    sState = 4;
+    memset(sResultRecord.mLongVarBinary.arr, 0x00, sBufLen);
+
+    EXEC SQL
+        SELECT C1, C2
+        INTO   :sResultRecord :sInd
+        FROM   TEST_T1
+        WHeRE  C1 = 1;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    printf("Compare record\n");
+    if( 0 == sInd.mLongVarBinaryInd )
+    {
+        if( memcmp( sInputRecord.mLongVarBinary.arr, sResultRecord.mLongVarBinary.arr, sInputRecord.mLongVarBinary.len ) == 0 )
+        {
+            printf("==> PASS\n");
+        }
+        else
+        {
+            printf("==> FAIL\n");
+        }
+    }
+    else
+    {
+        printf("==> FAIL( Org Binary len : %ld, Result Binary len : %lld )\n",
+                  sInputRecord.mLongVarBinary.len, sInd.mLongVarBinaryInd );
+    }
+
+    sState = 3;
+    free( sResultRecord.mLongVarBinary.arr );
+
+    sState = 2;
+    free( sInputRecord.mLongVarBinary.arr );
+
+    sState = 1;
+    printf("Drop table ...\n");
+    if(DropTable() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    sState = 0;
+    printf("Disconnect GOLDILOCKS ...\n");
+    if(Disconnect() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    printf("SUCCESS\n");
+    printf("############################\n");
+
+    return 0;
+
+  fail_exit:
+
+    printf("FAILURE\n");
+    printf("############################\n\n");
+
+    EXEC SQL ROLLBACK WORK;
+
+    switch(sState)
+    {
+        case 4:
+            free( sResultRecord.mLongVarBinary.arr );
+        case 3:
+            free( sInputRecord.mLongVarBinary.arr );
+        case 2:
+            printf("Drop table ...\n");
+            (void)DropTable();
+        case 1:
+            printf("Disconnect GOLDILOCKS ...\n");
+            (void)Disconnect();
+            break;
+        default:
+            break;
+    }
+
+    return 0;
+}
+
+int CreateTable()
+{
+    EXEC SQL DROP TABLE IF EXISTS TEST_T1;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    /*----------------------------------------------
+      Create Table
+    ------------------------------------------------*/
+    EXEC SQL CREATE TABLE TEST_T1 ( C1   INTEGER,
+                                    C2   LONG VARBINARY );
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+
+    return SUCCESS;
+
+  fail_exit:
+
+    printf("[ERROR] SQL ERROR CODE : [%d], MSG : [%s].\n",
+              sqlca.sqlcode,
+              sqlca.sqlerrm.sqlerrmc);
+
+    EXEC SQL ROLLBACK WORK;
+
+    return FAILURE;
+}
+
+int DropTable()
+{
+    /*----------------------------------------------
+      Drop Table
+    ------------------------------------------------*/
+    EXEC SQL DROP TABLE TEST_T1;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    printf("[ERROR] SQL ERROR CODE : [%d], MSG : [%s].\n",
+              sqlca.sqlcode,
+              sqlca.sqlerrm.sqlerrmc);
+
+    EXEC SQL ROLLBACK WORK;
+
+    return FAILURE;
+}
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    VARCHAR  sUid[80];
+    VARCHAR  sPwd[20];
+    VARCHAR  sConnStr[1024];
+    EXEC SQL END DECLARE SECTION;
+
+    /*----------------------------------------------
+      Log on GOLDILOCKS
+      ------------------------------------------------*/
+    strcpy((char *)sUid.arr, aUserID);
+    sUid.len = (short)strlen((char *)sUid.arr);
+    strcpy((char *)sPwd.arr, sPassword);
+    sPwd.len = (short)strlen((char *)sPwd.arr);
+    strcpy((char *)sConnStr.arr, aHostInfo);
+    sConnStr.len = (short)strlen((char *)sConnStr.arr);
+
+    /* DB 연결 */
+    EXEC SQL CONNECT :sUid IDENTIFIED BY :sPwd USING :sConnStr;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] Connection Failure!");
+
+    return FAILURE;
+}
+
+int Disconnect()
+{
+    EXEC SQL DISCONNECT;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] Disconnect Failure!");
+
+    return FAILURE;
+}

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-mapping PUBLIC 
+"-//Hibernate/Hibernate Mapping DTD 3.0//EN" 
+"http://hibernate.sourceforge.net/hibernate-mapping-3.0.dtd">
+
+<hibernate-mapping>
+	<class name="SampleTable" table="SAMPLETABLE">
+		<id column="ID" name="id" type="long">
+			<generator class="increment" />
+		</id>
+		<property column="STUDENT_NAME" name="name" type="string" />
+		<property column="BIGINT_VALUE" name="bigintValue" type="long" />
+		<property column="INT_VALUE" name="intValue" type="int" />
+		<property column="SMALL_VALUE" name="smallValue" type="short" />
+		<property column="FLOAT_VALUE" name="floatValue" type="float" />
+		<property column="DOUBLE_VALUE" name="doubleValue" type="double" />
+		<property column="NUMERIC_VALUE" name="numericValue" type="big_integer" precision="10" scale="5" />
+		<property column="DATE_VALUE" name="dateValue" type="date" />
+		<property column="TIME_VALUE" name="timeValue" type="time" />
+		<property column="TIMESTAMP_VALUE" name="timestampValue" type="timestamp" />
+		<property column="VARBINARY_VALUE" name="binaryValue" type="byte[]" />
+	</class>
+</hibernate-mapping>

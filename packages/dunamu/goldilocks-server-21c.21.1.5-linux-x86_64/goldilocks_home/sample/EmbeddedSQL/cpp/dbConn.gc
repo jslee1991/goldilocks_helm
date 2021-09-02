@@ -1,0 +1,67 @@
+/*
+ * overview.gc
+ *
+ * Connect / Disconnect
+ * DDL(Create/Drop table)
+ * Basic DML(Insert, Delete, Update)
+ * Standing Cursor
+ */
+EXEC SQL INCLUDE SQLCA;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "dbConn.h"
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    VARCHAR  sUid[80];
+    VARCHAR  sPwd[20];
+    VARCHAR  sConnStr[1024];
+    EXEC SQL END DECLARE SECTION;
+
+    /*----------------------------------------------
+      Log on GOLDILOCKS
+      ------------------------------------------------*/
+    strcpy((char *)sUid.arr, aUserID);
+    sUid.len = (short)strlen((char *)sUid.arr);
+    strcpy((char *)sPwd.arr, sPassword);
+    sPwd.len = (short)strlen((char *)sPwd.arr);
+    strcpy((char *)sConnStr.arr, aHostInfo);
+    sConnStr.len = (short)strlen((char *)sConnStr.arr);
+
+    /* DB 연결 */
+    EXEC SQL CONNECT :sUid IDENTIFIED BY :sPwd USING :sConnStr;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] Connection Failure!");
+
+    return FAILURE;
+}
+
+int Disconnect()
+{
+    EXEC SQL DISCONNECT;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] [ERROR] Disconnect Failure!");
+
+    return FAILURE;
+}
+
+

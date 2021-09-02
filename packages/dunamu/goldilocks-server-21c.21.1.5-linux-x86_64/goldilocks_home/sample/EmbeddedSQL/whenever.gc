@@ -1,0 +1,341 @@
+EXEC SQL INCLUDE SQLCA;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define  SUCCESS  0
+#define  FAILURE  -1
+
+#define  PRINT_SQL_ERROR(aMsg)                                      \
+    {                                                               \
+        printf("\n");                                               \
+        printf(aMsg);                                               \
+        printf("\nSQLCODE : %d\nSQLSTATE : %s\nERROR MSG : %s\n",   \
+               sqlca.sqlcode,                                       \
+               SQLSTATE,                                            \
+               sqlca.sqlerrm.sqlerrmc );                            \
+    }
+
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword);
+int Disconnect();
+int CreateTable();
+int DropTable();
+
+int insert()
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    int                 sNo;
+    char                sChar[10+1];
+    EXEC SQL END DECLARE SECTION;
+
+    printf("insert func called ...\n");
+
+    sNo = 1; 
+    strcpy( sChar, "TEST" );
+
+    EXEC SQL
+        INSERT INTO TEST_T1(C1, C2)
+        VALUES(:sNo, :sChar);
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        return -1;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        return -1;
+    }
+    return 0;
+}
+
+/* WHENEVER setting */
+EXEC SQL WHENEVER SQLERROR GOTO ERR;
+EXEC SQL WHENEVER NOT FOUND DO insert();
+
+int main(int   argc,
+         char  **argv)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    int                 sNo;
+    char                sChar[10+1];
+    EXEC SQL END DECLARE SECTION;
+    int  sState = 0;
+
+    printf("#### WHENEVER Test ####\n");
+
+    printf("Connect GOLDILOCKS ...\n");
+    if(Connect("DSN=GOLDILOCKS", "test", "test") != SUCCESS)
+    {
+        goto fail_exit;
+    }
+    sState = 1;
+
+    printf("Create table ...\n");
+    if(CreateTable() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+    sState = 2;
+
+
+    printf("1st. SELECT => not found -> insert()\n");
+    sNo = -1;
+    memset( sChar, 0x00, sizeof(sChar) );
+
+    EXEC SQL
+        SELECT C1, C2
+        INTO   :sNo, :sChar
+        FROM   TEST_T1;
+    if(sqlca.sqlcode != 0)
+    {
+        printf("[%d] %s\n", sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc);
+        insert();
+    }
+    printf("1st. result %d, [%s]\n\n", sNo, sChar);
+    printf("############################\n");
+
+    printf("2nd. SELECT => success\n");
+
+    sNo = -1;
+    memset( sChar, 0x00, sizeof(sChar) );
+
+    EXEC SQL
+        SELECT C1, C2
+        INTO   :sNo, :sChar
+        FROM   TEST_T1;
+    if(sqlca.sqlcode != 0)
+    {
+        printf("[%d] %s\n", sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc);
+    }
+    printf("2nd. result %d, [%s]\n\n", sNo, sChar);
+    printf("############################\n");
+
+
+EXEC SQL WHENEVER NOT FOUND CONTINUE;
+
+    printf("3rd. SELECT => not found -> continue \n");
+
+    sNo = -1;
+    memset( sChar, 0x00, sizeof(sChar) );
+
+    EXEC SQL
+        SELECT C1, C2
+        INTO   :sNo, :sChar
+        FROM   TEST_T1
+        WHERE C1 = 100;
+    if(sqlca.sqlcode != 0)
+    {
+        printf("[%d] %s\n", sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc);
+    }
+    printf("3rd. result %d, [%s]\n\n", sNo, sChar);
+    printf("############################\n");
+
+
+    printf("4th. SELECT => error\n");
+
+    sNo = -1;
+    memset( sChar, 0x00, sizeof(sChar) );
+
+    EXEC SQL
+        SELECT C1, C3
+        INTO   :sNo, :sChar
+        FROM   TEST_T1
+        WHeRE  C1 = 1;
+    if(sqlca.sqlcode != 0)
+    {
+        printf("[%d] %s\n", sqlca.sqlcode, sqlca.sqlerrm.sqlerrmc);
+    }
+    printf("4th. result %d, [%s]\n\n", sNo, sChar);
+    printf("############################\n");
+
+    sState = 1;
+    printf("Drop table ...\n");
+    if(DropTable() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    sState = 0;
+    printf("Disconnect GOLDILOCKS ...\n");
+    if(Disconnect() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    printf("SUCCESS\n");
+    printf("############################\n");
+
+    return 0;
+
+ERR:
+    printf("FROM WHENEVER ERR\n");
+    printf("############################\n\n");
+
+    EXEC SQL WHENEVER SQLERROR CONTINUE;
+    EXEC SQL ROLLBACK WORK;
+
+    switch(sState)
+    {
+        case 2:
+            printf("Drop table ...\n");
+            (void)DropTable();
+        case 1:
+            printf("Disconnect GOLDILOCKS ...\n");
+            (void)Disconnect();
+            break;
+        default:
+            break;
+    }
+
+    return 0;
+
+  fail_exit:
+
+    printf("FAILURE\n");
+    printf("############################\n\n");
+
+    EXEC SQL ROLLBACK WORK;
+
+    switch(sState)
+    {
+        case 2:
+            printf("Drop table ...\n");
+            (void)DropTable();
+        case 1:
+            printf("Disconnect GOLDILOCKS ...\n");
+            (void)Disconnect();
+            break;
+        default:
+            break;
+    }
+
+    return 0;
+}
+
+/* WHENEVER initialize */
+EXEC SQL WHENEVER SQLERROR CONTINUE;
+EXEC SQL WHENEVER NOT FOUND CONTINUE;
+
+int CreateTable()
+{
+
+    EXEC SQL DROP TABLE IF EXISTS TEST_T1;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    /*----------------------------------------------
+      Create Table
+    ------------------------------------------------*/
+    EXEC SQL CREATE TABLE TEST_T1 ( C1   INTEGER,
+                                    C2   CHAR(10) );
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+
+    return SUCCESS;
+
+  fail_exit:
+
+    printf("[ERROR] SQL ERROR CODE : [%d], MSG : [%s].\n",
+              sqlca.sqlcode,
+              sqlca.sqlerrm.sqlerrmc);
+
+    EXEC SQL ROLLBACK WORK;
+
+    return FAILURE;
+}
+
+int DropTable()
+{
+    /*----------------------------------------------
+      Drop Table
+    ------------------------------------------------*/
+    EXEC SQL DROP TABLE TEST_T1;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    printf("[ERROR] SQL ERROR CODE : [%d], MSG : [%s].\n",
+              sqlca.sqlcode,
+              sqlca.sqlerrm.sqlerrmc);
+
+    EXEC SQL ROLLBACK WORK;
+
+    return FAILURE;
+}
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    VARCHAR  sUid[80];
+    VARCHAR  sPwd[20];
+    VARCHAR  sConnStr[1024];
+    EXEC SQL END DECLARE SECTION;
+
+    /*----------------------------------------------
+      Log on GOLDILOCKS
+      ------------------------------------------------*/
+    strcpy((char *)sUid.arr, aUserID);
+    sUid.len = (short)strlen((char *)sUid.arr);
+    strcpy((char *)sPwd.arr, sPassword);
+    sPwd.len = (short)strlen((char *)sPwd.arr);
+    strcpy((char *)sConnStr.arr, aHostInfo);
+    sConnStr.len = (short)strlen((char *)sConnStr.arr);
+
+    /* DB 연결 */
+    EXEC SQL CONNECT :sUid IDENTIFIED BY :sPwd USING :sConnStr;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] Connection Failure!");
+
+    return FAILURE;
+}
+
+int Disconnect()
+{
+    EXEC SQL DISCONNECT;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] Disconnect Failure!");
+
+    return FAILURE;
+}

@@ -1,0 +1,20 @@
+piVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insert-deploy
+  labels:
+    app: insert
+spec:
+  replicas: 100
+  selector:
+    matchLabels:
+      app: insert
+  template:
+    metadata:
+      labels:
+        app: insert
+    spec:
+      containers:
+      - name: insert
+        image: sunjesoft/app:20c_1_16
+      hostNetwork: true

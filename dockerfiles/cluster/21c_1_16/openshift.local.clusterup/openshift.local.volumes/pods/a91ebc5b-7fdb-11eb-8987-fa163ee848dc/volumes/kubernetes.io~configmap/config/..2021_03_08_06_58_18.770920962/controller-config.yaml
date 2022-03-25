@@ -1,0 +1,1 @@
+{"apiVersion":"servicecertsigner.config.openshift.io/v1alpha1","caBundleFile":"/var/run/configmaps/signing-cabundle/cabundle.crt","kind":"APIServiceCABundleInjectorConfig"}

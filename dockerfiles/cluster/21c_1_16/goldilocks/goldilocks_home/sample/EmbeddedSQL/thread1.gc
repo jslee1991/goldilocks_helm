@@ -1,0 +1,402 @@
+/*
+ * thread1.gc
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <pthread.h>
+
+EXEC SQL INCLUDE SQLCA;
+
+#define  SUCCESS  0
+#define  FAILURE  -1
+
+#define  PRINT_SQL_ERROR(aMsg)                                      \
+    {                                                               \
+        printf("\n");                                               \
+        printf(aMsg);                                               \
+        printf("\nSQLCODE : %d\nSQLSTATE : %s\nERROR MSG : %s\n",   \
+               sqlca.sqlcode,                                       \
+               SQLSTATE,                                            \
+               sqlca.sqlerrm.sqlerrmc );                            \
+    }
+
+int Connect(sql_context aCtx, char *aHostInfo, char *aUserID, char *sPassword);
+int CreateEmpTempTable();
+int DropEmpTempTable();
+void *clientThread(void *args);
+
+typedef struct thread_param
+{
+    int    mNo;
+    char  *mJobName;
+} thread_param;
+
+#define  THREAD_COUNT    2
+char gJobName[THREAD_COUNT][20]= {
+    "RND",
+    "SUPPORT"
+};
+
+int main(int argc, char **argv)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    int          sEmpNo;
+    varchar      sEName[20 + 1];
+    char         sJob[20];
+    long         sSalary;
+    EXEC SQL END DECLARE SECTION;
+
+    int          sRecordCount = 0;
+    pthread_t    thread_id[THREAD_COUNT];
+    thread_param param[THREAD_COUNT];
+    int          state = 0;
+    int          i;
+
+    printf("Connect GOLDILOCKS ...\n");
+    if(Connect(NULL, "DSN=GOLDILOCKS", "test", "test") != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    if(CreateEmpTempTable() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+    state = 1;
+
+    /***********************************************
+     * create client thread
+     **********************************************/
+    for( i = 0; i < THREAD_COUNT; i ++ )
+    {
+        param[i].mNo = i;
+        param[i].mJobName = gJobName[i];
+
+        if( pthread_create(&thread_id[i],
+                           NULL,
+                           clientThread,
+                           &param[i]) != 0 )
+        {
+            printf( "Can't create thread %d!\n", i );
+        }
+        else
+        {
+            printf( "Create thread %d!\n", i );
+        }
+    }
+
+    for( i = 0; i < THREAD_COUNT; i ++ )
+    {
+        if( pthread_join(thread_id[i],
+                         NULL) != 0 )
+        {
+            printf( "Error when waiting for thread %d to terminate!\n", i );
+        }
+        else
+        {
+            printf( "Stopped thread %d!\n", i );
+        }
+    }
+
+    /***********************************************
+     * Retrieve employee
+     **********************************************/
+    EXEC SQL
+        DECLARE EMP_CUR CURSOR FOR
+        SELECT empno, ename, job, sal
+        FROM   EMP_TEMP
+        ORDER BY empno;
+
+    EXEC SQL OPEN EMP_CUR;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    printf(" EMPNO    ENAME                JOB      SALARY\n");
+    printf("====== ==================== ========== ========\n");
+
+    while( 1 )
+    {
+        EXEC SQL
+            FETCH EMP_CUR
+            INTO  :sEmpNo, :sEName, :sJob, :sSalary;
+
+        if(sqlca.sqlcode == SQL_NO_DATA)
+        {
+            break;
+        }
+        else if(sqlca.sqlcode != 0)
+        {
+            PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+            goto fail_exit;
+        }
+
+        sRecordCount ++;
+
+        printf("%6d %20s %10s %8ld\n",
+               sEmpNo, sEName.arr, sJob, sSalary);
+    }
+
+    printf("====== ==================== ========== ========\n");
+    printf("Record Count = %d\n", sRecordCount);
+    printf("====== ==================== ========== ========\n");
+
+    EXEC SQL CLOSE EMP_CUR;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    state = 0;
+    if(DropEmpTempTable() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK RELEASE;
+    if(sqlca.sqlcode != 0)
+    {
+        PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+        goto fail_exit;
+    }
+
+    printf("SUCCESS\n");
+    printf("############################\n");
+
+    return 0;
+
+  fail_exit:
+
+    printf("FAILURE\n");
+    printf("############################\n\n");
+
+    switch( state )
+    {
+        case 1:
+            (void)DropEmpTempTable();
+            break;
+        default:
+            break;
+    }
+
+    EXEC SQL ROLLBACK WORK RELEASE;
+
+    return 0;
+}
+
+int Connect(sql_context aCtx, char *aHostInfo, char *aUserID, char *sPassword)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    VARCHAR  sUid[80];
+    VARCHAR  sPwd[20];
+    VARCHAR  sConnStr[1024];
+    EXEC SQL END DECLARE SECTION;
+    struct sqlca sqlca;
+
+    /*----------------------------------------------
+      Log on GOLDILOCKS
+      ------------------------------------------------*/
+    strcpy((char *)sUid.arr, aUserID);
+    sUid.len = (short)strlen((char *)sUid.arr);
+    strcpy((char *)sPwd.arr, sPassword);
+    sPwd.len = (short)strlen((char *)sPwd.arr);
+    strcpy((char *)sConnStr.arr, aHostInfo);
+    sConnStr.len = (short)strlen((char *)sConnStr.arr);
+
+    /* DB 연결 */
+    if( aCtx != NULL )
+    {
+        EXEC SQL CONTEXT USE :aCtx;
+        EXEC SQL CONNECT :sUid IDENTIFIED BY :sPwd USING :sConnStr;
+    }
+    else
+    {
+        EXEC SQL CONTEXT USE DEFAULT;
+        EXEC SQL CONNECT :sUid IDENTIFIED BY :sPwd USING :sConnStr;
+    }
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] Connection Failure!");
+
+    return FAILURE;
+}
+
+int Disconnect(sql_context aCtx)
+{
+    struct sqlca sqlca;
+
+    /* DB 연결 해제 */
+    if( aCtx != NULL )
+    {
+        EXEC SQL CONTEXT USE :aCtx;
+        EXEC SQL DISCONNECT;
+    }
+    else
+    {
+        EXEC SQL CONTEXT USE DEFAULT;
+        EXEC SQL DISCONNECT;
+    }
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] Connection Failure!");
+
+    return FAILURE;
+}
+
+int CreateEmpTempTable()
+{
+    /*----------------------------------------------
+      Create Table
+      ------------------------------------------------*/
+    EXEC SQL DROP TABLE IF EXISTS EMP_TEMP;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL
+        CREATE TABLE EMP_TEMP (
+            EMPNO NUMBER(4) CONSTRAINT PK_EMP_TEMP PRIMARY KEY,
+            ENAME VARCHAR2(10),
+            JOB VARCHAR2(9),
+            SAL NUMBER(7,2),
+            DEPTNO NUMBER(2) );
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    EXEC SQL ROLLBACK WORK;
+
+    return FAILURE;
+}
+
+int DropEmpTempTable()
+{
+    /*----------------------------------------------
+      Drop Table
+      ------------------------------------------------*/
+    EXEC SQL DROP TABLE EMP_TEMP;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    EXEC SQL ROLLBACK WORK;
+
+    return FAILURE;
+}
+
+void *clientThread(void *args)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    SQL_CONTEXT   my_context;
+    char          job_name[20 + 1];
+    EXEC SQL END DECLARE SECTION;
+    struct sqlca  sqlca;
+    int           state = 0;
+    thread_param *param = (thread_param *)args;
+
+    EXEC SQL CONTEXT ALLOCATE :my_context;
+    state = 1;
+
+    EXEC SQL CONTEXT USE :my_context;
+
+    if(Connect(my_context, "DSN=GOLDILOCKS", "test", "test") != SUCCESS)
+    {
+        goto fail_exit;
+    }
+    state = 2;
+
+    strcpy( job_name, param->mJobName );
+
+    EXEC SQL
+        INSERT INTO EMP_TEMP
+        SELECT *
+        FROM   EMP
+        WHERE  JOB = :job_name;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    state = 1;
+    if(Disconnect(my_context) != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    state = 0;
+    EXEC SQL CONTEXT FREE :my_context;
+
+    pthread_exit(0);
+    return NULL;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    switch(state)
+    {
+        case 2:
+            (void)Disconnect(my_context);
+        case 1:
+            EXEC SQL CONTEXT FREE :my_context;
+            break;
+        default:
+            break;
+    }
+
+    pthread_exit(0);
+    return NULL;
+}

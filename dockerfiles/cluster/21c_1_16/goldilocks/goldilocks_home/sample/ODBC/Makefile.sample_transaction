@@ -1,0 +1,23 @@
+.SUFFIXES: .c .o
+
+CC = gcc
+CFLAGS = -g -Wall
+
+LFLAGS = -L$(GOLDILOCKS_HOME)/lib
+LIB = -lgoldilocksa -lpthread -ldl -lm -lrt
+
+INC = -I$(GOLDILOCKS_HOME)/include
+
+TARGET = SAMPLE_TRANSACTION
+OBJECTS = $(TARGET).o
+SRCS = $(TARGET).c
+
+$(TARGET):	$(OBJECTS)
+		$(CC) -o $(TARGET) $(OBJECTS) $(LFLAGS) $(LIB)
+
+$(OBJECTS):	$(SRCS)
+		$(CC) $(CFLAGS) -c $(INC) $(SRCS)
+
+clean:
+		rm $(TARGET).o $(TARGET)
+

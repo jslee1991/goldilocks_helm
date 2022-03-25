@@ -8,7 +8,6 @@ metadata:
     heritage: Tiller
     group: goldilocks
   name: goldilocks 
-  namespace: my-project 
 spec:
   podManagementPolicy: OrderedReady
   replicas: 1

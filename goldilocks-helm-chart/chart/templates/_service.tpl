@@ -37,7 +37,8 @@ spec:
 
   selector:
     app: {{ template "goldilocks.fullname" . }}
-    statefulset.kubernetes.io/pod-name: {{ .Values.groupMaster }}
+    pod-name: {{ .Values.groupMaster }}
+#    statefulset.kubernetes.io/pod-name: {{ .Values.groupMaster }}
 {{- end -}}
 ---
 {{ define "goldilocks-cluster-service" -}}

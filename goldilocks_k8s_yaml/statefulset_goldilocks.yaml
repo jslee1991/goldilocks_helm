@@ -1,5 +1,4 @@
-
-apiVersion: apps/v1
+apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
   labels:
@@ -8,7 +7,7 @@ metadata:
     heritage: Tiller
     group: goldilocks
   name: goldilocks 
-  namespace: my-project 
+  namespace: myproject 
 spec:
   podManagementPolicy: OrderedReady
   replicas: 1

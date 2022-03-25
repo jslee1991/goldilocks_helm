@@ -101,7 +101,7 @@ affinity: {}
 topology:
   groups:
     - name: goldilocks
-      replicaCount: 2                  # members count 
+      replicaCount: 1                  # members count 
 #      revisionHistoryLimit: 10 
       envOverrides: {
         "TABLE_SPACE_SIZE":"1M",

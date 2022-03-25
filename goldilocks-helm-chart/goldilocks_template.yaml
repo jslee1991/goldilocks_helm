@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: goldilocks-template
+  annotations:
+    description: "Description"
+    iconClass: "icon-goldilocks"
+    tags: "database,rdbms"
+objects:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    name: goldilocks
+  spec:
+    containers:
+    - env:
+      - name: SYS_PASSWORD
+        value: ${SYS_PASSWORD}
+      - name: MEMBER_COUNT
+        value: ${MEMBER_COUNT}
+      - name: GROUP_COUNT
+        value: ${GROUP_COUNT}
+      image: docker.io/sunjesoft/cluster:20c_1_9
+      name: master
+      ports: 
+      - containerPort: 22581
+        protocol: TCP
+      - containerPort: 10101
+        protocol: TCP
+parameters:
+- description: Password used for goldilocks authentication
+  from: '[A-Z0-9]{8}'
+  generate: expression
+  name: SYS_PASSWORD
+- description: Password used for goldilocks authentication
+  from: '[A-Z0-9]{8}'
+  generate: expression
+  name: MEMBER_COUNT
+- description: Password used for goldilocks authentication
+  from: '[A-Z0-9]{8}'
+  generate: expression
+  name: GROUP_COUNT
+
+
+

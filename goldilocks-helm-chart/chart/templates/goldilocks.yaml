@@ -4,7 +4,7 @@
 ---
 {{- $groupName := $member.name }} 
 
-apiVersion: apps/v1
+apiVersion: apps/v1beta1
 kind: StatefulSet
 metadata:
   labels:
@@ -30,6 +30,7 @@ spec:
         app: {{ $defaultFullname }}
         release: {{ $.Release.Name }}
         group: {{ $groupName  }}
+        pod-name: {{ template "goldilocks.fullname" . }}
     spec:
       volumes:
         - name: goldilocks-data

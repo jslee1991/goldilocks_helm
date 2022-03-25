@@ -1,0 +1,59 @@
+apiVersion: apps/v1beta1
+kind: StatefulSet
+metadata:
+  labels:
+    app: goldilocks
+    group: goldilocks
+  name: goldilocks
+spec:
+  podManagementPolicy: OrderedReady
+  selector:
+      matchLabels:
+        app: goldilocks
+        group: goldilocks
+  replicas: 1
+  revisionHistoryLimit: 10
+  serviceName: goldilocks
+  template:
+    metadata:
+      labels:
+        app: goldilocks
+        group: goldilocks
+    spec:
+      containers:
+      - env:
+        - name: APP_NAME
+          value: GOLDILOCKS
+        - name: MY_POD_NAME
+          value: goldilocks-0
+        - fieldRef:
+            fieldPath: status.podIP
+          name: MY_POD_IP
+          valueFrom: null
+        image: docker.io/sunjesoft/cluster:21.1.16
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /home/sunje/goldilocks_home/drop_member.sh
+        livenessProbe:
+          exec:
+            command:
+            - cat
+            - /home/sunje/entrypoint.sh
+        name: goldilocks
+        ports:
+        - containerPort: 22581
+          name: listener
+          protocol: TCP
+        - containerPort: 42581
+          name: locator
+          protocol: UDP
+        readinessProbe:
+          exec:
+            command:
+            - cat
+            - /home/sunje/entrypoint.sh
+        securityContext:
+          runAsUser: 1000
+

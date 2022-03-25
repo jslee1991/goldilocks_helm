@@ -1,0 +1,133 @@
+####################################################################
+###################### OPENSHIFT TEMPLATE ########################## 
+####################################################################
+
+apiVersion: v1
+kind: Template
+metadata:
+  annotations:
+    description: Description
+    iconClass: icon-goldilocks #no icon, now
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"Template","metadata":{"annotations":{"description":"Description","iconClass":"icon-goldilocks","tags":"database,rdbms"},"name":"goldilocks-template","namespace":"openshift"},"objects":[{"apiVersion":"v1","kind":"Pod","metadata":{"name":"goldilocks"},"spec":{"containers":[{"env":[{"name":"SYS_PASSWORD","value":"${SYS_PASSWORD}"},{"name":"MEMBER_COUNT","value":"${MEMBER_COUNT}"},{"name":"GROUP_COUNT","value":"${GROUP_COUNT}"}],"image":"docker.io/sunjesoft/cluster:20c_1_9","name":"master","ports":[{"containerPort":22581,"protocol":"TCP"},{"containerPort":10101,"protocol":"TCP"}]}]}}],"parameters":[{"description":"Password used for goldilocks authentication","from":"[A-Z0-9]{8}","generate":"expression","name":"SYS_PASSWORD"},{"description":"Password used for goldilocks authentication","from":"[A-Z0-9]{8}","generate":"expression","name":"MEMBER_COUNT"},{"description":"Password used for goldilocks authentication","from":"[A-Z0-9]{8}","generate":"expression","name":"GROUP_COUNT"}]}
+    tags: database,rdbms
+  creationTimestamp: 2022-02-23T09:15:53Z
+  name: goldilocks-template
+  namespace: openshift
+  resourceVersion: "30247"
+  selfLink: /oapi/v1/namespaces/openshift/templates/goldilocks-template
+  uid: 3388472b-9489-11ec-b3bc-fa163edfa7c1
+
+objects:
+####################################################################
+###################### STATEFULSET TEMPLATE ########################
+####################################################################
+
+- apiVersion: apps/v1beta1
+  kind: StatefulSet
+  metadata:
+    labels:
+      app: goldilocks
+      group: goldilocks
+    name: goldilocks
+  spec:
+    podManagementPolicy: OrderedReady
+    selector:
+        matchLabels:
+          app: goldilocks
+          group: goldilocks
+    replicas: 1
+    revisionHistoryLimit: 10
+    serviceName: goldilocks
+    template:
+      metadata:
+        labels:
+          app: goldilocks
+          group: goldilocks
+      spec:
+        containers:
+        - env:
+          - name: APP_NAME
+            value: GOLDILOCKS
+          - name: MY_POD_NAME
+            value: goldilocks-0
+          - name: MY_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          image: docker.io/sunjesoft/cluster:20c_1_19
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                - /home/sunje/goldilocks_home/drop_member.sh
+          livenessProbe:
+            exec:
+              command:
+              - cat
+              - /home/sunje/entrypoint.sh
+          name: goldilocks
+          ports:
+          - containerPort: 22581
+            name: listener
+            protocol: TCP
+          - containerPort: 42581
+            name: locator
+            protocol: UDP
+          readinessProbe:
+            exec:
+              command:
+              - cat
+              - /home/sunje/entrypoint.sh
+          securityContext:
+            runAsUser: 1000
+
+#################################################################
+########################### SERVICE #############################
+#################################################################
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: goldilocks-master
+    labels:
+      app: goldilocks
+  spec:
+    type: ClusterIP
+    ports:
+    - name: goldilocks
+      port: 10101
+      targetPort: goldilocks
+    - name: goldilocks-master
+      port: 22581
+      targetPort: 22581
+    - name: goldilocks-glocator
+      port: 42581
+      targetPort: 42581
+      protocol: UDP
+    selector:
+      app: goldilocks
+      statefulset.kubernetes.io/pod-name: goldilocks-0
+
+####################################################################
+########################## PARAMETERS ##############################
+####################################################################
+
+parameters:
+- description: REPLICA
+  from: '[A-Z0-9]{8}'
+  generate: expression
+  name: REPLICA
+- description: Password used for goldilocks authentication
+  from: '[A-Z0-9]{8}'
+  generate: expression
+  name: SYS_PASSWORD
+- description: Password used for goldilocks authentication
+  from: '[A-Z0-9]{8}'
+  generate: expression
+  name: MEMBER_COUNT
+- description: Password used for goldilocks authentication
+  from: '[A-Z0-9]{8}'
+  generate: expression
+  name: GROUP_COUNT
+

@@ -1,0 +1,5 @@
+sample files
+
+[Building and Execution JDBC the Sample File]
+javac -cp .:$GOLDILOCKS_HOME/lib/goldilocks6.jar JdbcSample.java
+java -cp .:$GOLDILOCKS_HOME/lib/goldilocks6.jar JdbcSample

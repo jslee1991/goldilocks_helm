@@ -39,6 +39,9 @@ spec:
 #        - name: nfs-volumn
 #          persistentVolumeClaim:
 #             claimName: nfs-pvc
+      nodeSelector:
+        user: js
+#        disktype: ssd 
       containers:
       - name: {{ $.Chart.Name }}
         image: "{{ $member.image.repository | default $.Values.groups.image.repository }}:{{ $.Chart.AppVersion }}"  
@@ -49,6 +52,8 @@ spec:
           privileged: true
 #          fsGroup: 1000
         env:
+          - name: CREATE_TABLE_QUERY
+            value: {{ $.Values.groups.envOverrides.CREATE_TABLE_QUERY }}
           - name: APP_NAME
             value: GOLDILOCKS
 #          - name: MY_POD_NAME

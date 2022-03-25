@@ -1,0 +1,52 @@
+##################### OPENSHIFT #####################
+
+
+1. scc 권한부여
+
+NAME               PRIV      CAPS      SELINUX     RUNASUSER          FSGROUP     SUPGROUP    PRIORITY   READONLYROOTFS   VOLUMES
+anyuid             false     []        MustRunAs   RunAsAny           RunAsAny    RunAsAny    10         false            [configMap downwardAPI emptyDir persistentVolumeClaim projected secret]
+hostaccess         false     []        MustRunAs   MustRunAsRange     MustRunAs   RunAsAny    <none>     false            [configMap downwardAPI emptyDir hostPath persistentVolumeClaim projected secret]
+hostmount-anyuid   false     []        MustRunAs   RunAsAny           RunAsAny    RunAsAny    <none>     false            [configMap downwardAPI emptyDir hostPath nfs persistentVolumeClaim projected secret]
+hostnetwork        false     []        MustRunAs   MustRunAsRange     MustRunAs   MustRunAs   <none>     false            [configMap downwardAPI emptyDir persistentVolumeClaim projected secret]
+nonroot            false     []        MustRunAs   MustRunAsNonRoot   RunAsAny    RunAsAny    <none>     false            [configMap downwardAPI emptyDir persistentVolumeClaim projected secret]
+privileged         true      [*]       RunAsAny    RunAsAny           RunAsAny    RunAsAny    <none>     false            [*]
+restricted         false     []        MustRunAs   MustRunAsRange     MustRunAs   RunAsAny    <none>     false            [configMap downwardAPI emptyDir persistentVolumeClaim projected secret]
+
+
+1) 필수 anyuid
+oc adm policy add-scc-to-user anyuid -z default -n <NAMESPACE>
+
+2) OPTIONS (PVC, HOSTNETWORK 사용 유무에 따라..)
+privileged를 주는것도 괜찮을듯..
+hostpath를 사용하기 위해 hostaccesss등을 부여 해야 함.
+
+2. template 생성
+oc apply -f goldilocks_template.yaml
+
+3. template 확인
+oc get template -n openshift |grep goldilocks
+
+4. openshift webgui통해 goldilocks 배포 parameter 설정
+1) member count
+-> 멤버 갯수를 설정함.
+replicas % count로 cluster 를 구성함.
+
+2) DEFAULT USER
+-> DB 계정 생성
+-> NULL 시에는 openshift로 생성
+
+3) DEFAULT PASSWORD
+-> DEFAULT USER의 PASSWORD 설정
+-> NULL 시에는 openshift로 생성
+-> DEFAULT USER와 DEFAULT PASSWORD가 NULL 시에는 openshift/openshift 임
+
+4) replcas 
+-> 1)의 member count와 함께 cluster 구성 할때 쓰임
+
+5. 프러퍼티 설정
+-> 어떻게 할지..
+
+6. LICENSE 설정
+-> SUPER로.. HARD CODING
+
+7.  

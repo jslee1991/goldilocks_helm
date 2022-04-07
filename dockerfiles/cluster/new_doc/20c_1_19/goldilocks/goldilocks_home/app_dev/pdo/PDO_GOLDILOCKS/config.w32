@@ -1,0 +1,30 @@
+// $Id$
+// vim:ft=javascript
+
+ARG_WITH("pdo-goldilocks", "GOLDILOCKS support for PDO", "no");
+
+if (PHP_PDO_GOLDILOCKS != "no")
+{
+    PDO_GOLDILOCKS_LIBDIR = PHP_PDO_GOLDILOCKS + "\\lib;"
+    PDO_GOLDILOCKS_INCDIR = PHP_PDO_GOLDILOCKS + "\\include;"
+    
+    if (CHECK_LIB("Dbghelp.lib", "pdo_goldilocks") && 
+        CHECK_LIB("gdlcs.lib", "pdo_goldilocks", PDO_GOLDILOCKS_LIBDIR) && 
+        CHECK_HEADER_ADD_INCLUDE('goldilocks.h', 'CFLAGS_PDO_GOLDILOCKS', PDO_GOLDILOCKS_INCDIR))
+    {
+        if (PHP_VERSION == 7)
+        {
+            EXTENSION("pdo_goldilocks", "pdo_goldilocks.c goldilocks_driver7.c goldilocks_stmt7.c", true);
+        }
+        else
+        {
+            EXTENSION("pdo_goldilocks", "pdo_goldilocks.c goldilocks_driver.c goldilocks_stmt.c", true);
+        }
+        ADD_EXTENSION_DEP('pdo_goldilocks', 'pdo');
+    }
+    else
+    {
+        WARNING("pdo_goldilocks not enabled; libraries and headers not found");
+        PHP_PDO_GOLDILOCKS = "no"
+    }
+}

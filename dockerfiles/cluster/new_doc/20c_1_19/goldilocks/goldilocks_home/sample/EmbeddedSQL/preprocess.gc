@@ -1,0 +1,333 @@
+EXEC SQL INCLUDE SQLCA;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+EXEC SQL INCLUDE preprocess.h;
+
+
+#define  SUCCESS  0
+#define  FAILURE  -1
+
+#define  PRINT_SQL_ERROR(aMsg)                                      \
+    {                                                               \
+        printf("\n");                                               \
+        printf(aMsg);                                               \
+        printf("\nSQLCODE : %d\nSQLSTATE : %s\nERROR MSG : %s\n",   \
+               sqlca.sqlcode,                                       \
+               SQLSTATE,                                            \
+               sqlca.sqlerrm.sqlerrmc );                            \
+    }
+
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword);
+int Disconnect();
+
+EXEC SQL WHENEVER SQLERROR GOTO ERR;
+
+int main(int   argc,
+         char  **argv)
+{
+    printf("#### PREPROCESS Test ####\n");
+
+#define AAA
+
+    EXEC SQL BEGIN DECLARE SECTION;
+
+#if 0
+    /**
+     * The sVarchar101 variable is not converted.
+     */
+    VARCHAR             sVarchar100[100];
+#endif
+
+#define BBB
+#define CCC
+#undef  CCC
+#define DDD     (-2 + 5)
+    /**
+     * AAA not defined ( defined outside declare section )
+     * BBB defined
+     * CCC not defined
+     * DDD defined 3
+     * EEE defined by preprocess.h
+     */
+#ifdef AAA
+    // c compiler
+    char                sChar101[100];
+#else
+    // gpec compiler
+    VARCHAR             sVarchar101[100];
+#endif
+
+#ifdef BBB
+    VARCHAR             sVarchar102[100];
+#endif
+
+#ifdef CCC
+    VARCHAR             sVarchar103[100];
+#endif
+
+#ifndef CCC
+    VARCHAR             sVarchar104[100];
+#endif
+
+#if defined(BBB) && defined(CCC)
+    VARCHAR             sVarchar105[100];
+#endif
+
+#if defined(AAA) || defined(BBB)
+    VARCHAR             sVarchar106[100];
+#endif
+
+#if !defined(AAA) && defined(CCC)
+    VARCHAR             sVarchar107[100];
+#endif
+
+#ifdef DDA
+    VARCHAR             sVarchar108[100];
+#elif defined DDD
+    VARCHAR             sVarchar109[100];
+#endif
+
+#if DDD == 1
+    VARCHAR             sVarchar110[100];
+#elif DDD == 3
+    VARCHAR             sVarchar111[100];
+#elif DDD == 5
+    VARCHAR             sVarchar112[100];
+#else
+    VARCHAR             sVarchar113[100];
+#endif
+
+#if DDD > 3
+    #if DDD < 5
+        VARCHAR             sVarchar120[100];
+    #else
+        VARCHAR             sVarchar121[100];
+    #endif
+#else
+    #if DDD > 0
+        VARCHAR             sVarchar122[100];
+    #else
+        VARCHAR             sVarchar123[100];
+    #endif
+#endif
+
+#ifdef EEE
+    VARCHAR             sVarchar130[100];
+#endif
+
+    EXEC SQL END DECLARE SECTION;
+    int  sState = 0;
+
+
+    printf("Connect GOLDILOCKS ...\n");
+    if(Connect("DSN=GOLDILOCKS", "test", "test") != SUCCESS)
+    {
+        goto fail_exit;
+    }
+    sState = 1;
+
+
+#ifdef AAA
+    // c compiler
+    // char                sChar101[100];
+    strcpy( sChar101, "#ifdef AAA" );
+    printf("Result :\"%s\"\n", sChar101);
+#else
+    // gpec compiler
+    // VARCHAR             sVarchar101[100];
+    EXEC SQL SELECT '#ifdef AAA else' INTO   :sVarchar101 FROM   DUAL;
+    printf("Result :\"%s\"\n", sVarchar101.arr);
+#endif
+
+#ifdef BBB
+    // VARCHAR             sVarchar102[100];
+    EXEC SQL SELECT '#ifdef BBB' INTO   :sVarchar102 FROM   DUAL;
+    printf("Result :\"%s\"\n", sVarchar102.arr);
+#else
+    EXEC SQL ... ; // This line is not converted by gpec.
+#endif
+
+
+#ifdef CCC
+    // VARCHAR             sVarchar103[100];
+    EXEC SQL ... ; // This line is not converted by gpec.
+#endif
+
+#ifndef CCC
+    // VARCHAR             sVarchar104[100];
+    EXEC SQL SELECT '#ifndef CCC' INTO   :sVarchar104 FROM   DUAL;
+    printf("Result :\"%s\"\n", sVarchar104.arr);
+#endif
+
+#if defined(BBB) && defined(CCC)
+    // VARCHAR             sVarchar105[100];
+    EXEC SQL ... ; // This line is not converted by gpec.
+#endif
+
+#if defined(AAA) || defined(BBB)
+    // VARCHAR             sVarchar106[100];
+    EXEC SQL SELECT '#if defined(AAA) || defined(BBB)' INTO   :sVarchar106 FROM   DUAL;
+    printf("Result :\"%s\"\n", sVarchar106.arr);
+#endif
+
+#if !defined(AAA) && defined(CCC)
+    // VARCHAR             sVarchar107[100];
+    EXEC SQL ... ; // This line is not converted by gpec.
+#endif
+
+#ifdef DDA
+    // VARCHAR             sVarchar108[100];
+    EXEC SQL ... ; // This line is not converted by gpec.
+#elif defined DDD
+    // VARCHAR             sVarchar109[100];
+    EXEC SQL SELECT '#elif defined DDD' INTO   :sVarchar109 FROM   DUAL;
+    printf("Result :\"%s\"\n", sVarchar109.arr);
+#endif
+
+#if DDD == 1
+    // VARCHAR             sVarchar110[100];
+    EXEC SQL ... ; // This line is not converted by gpec.
+#elif DDD == 3
+    // VARCHAR             sVarchar111[100];
+    EXEC SQL SELECT '#elif DDD == 3' INTO   :sVarchar111 FROM   DUAL;
+    printf("Result :\"%s\"\n", sVarchar111.arr);
+#elif DDD == 5
+    // VARCHAR             sVarchar112[100];
+    EXEC SQL ... ; // This line is not converted by gpec.
+#else
+    // VARCHAR             sVarchar113[100];
+    EXEC SQL ... ; // This line is not converted by gpec.
+#endif
+
+#if DDD > 3
+    #if DDD < 5
+        // VARCHAR             sVarchar120[100];
+        EXEC SQL ... ; // This line is not converted by gpec.
+    #else
+        // VARCHAR             sVarchar121[100];
+        EXEC SQL ... ; // This line is not converted by gpec.
+    #endif
+#else
+    #if DDD > 0
+        // VARCHAR             sVarchar122[100];
+        EXEC SQL SELECT '#if DDD <= 3 and #if DDD > 0' INTO   :sVarchar122 FROM   DUAL;
+        printf("Result :\"%s\"\n", sVarchar122.arr);
+    #else
+        // VARCHAR             sVarchar123[100];
+        EXEC SQL ... ; // This line is not converted by gpec.
+    #endif
+#endif
+
+#ifdef EEE
+    // VARCHAR             sVarchar130[100];
+    EXEC SQL SELECT '#ifdef EEE' INTO   :sVarchar130 FROM   DUAL;
+    printf("Result :\"%s\"\n", sVarchar130.arr);
+#endif
+
+    sState = 0;
+    printf("Disconnect GOLDILOCKS ...\n");
+    if(Disconnect() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    printf("SUCCESS\n");
+    printf("############################\n");
+
+    return 0;
+
+ERR:
+    printf("FROM WHENEVER ERR\n");
+    printf("############################\n\n");
+
+    EXEC SQL WHENEVER SQLERROR CONTINUE;
+    EXEC SQL ROLLBACK WORK;
+
+    switch(sState)
+    {
+        case 1:
+            printf("Disconnect GOLDILOCKS ...\n");
+            (void)Disconnect();
+            break;
+        default:
+            break;
+    }
+
+    return 0;
+
+  fail_exit:
+
+    printf("FAILURE\n");
+    printf("############################\n\n");
+
+    EXEC SQL ROLLBACK WORK;
+
+    switch(sState)
+    {
+        case 1:
+            printf("Disconnect GOLDILOCKS ...\n");
+            (void)Disconnect();
+            break;
+        default:
+            break;
+    }
+
+    return 0;
+}
+
+EXEC SQL WHENEVER SQLERROR CONTINUE;
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    VARCHAR  sUid[80];
+    VARCHAR  sPwd[20];
+    VARCHAR  sConnStr[1024];
+    EXEC SQL END DECLARE SECTION;
+
+    /*----------------------------------------------
+      Log on GOLDILOCKS
+      ------------------------------------------------*/
+    strcpy((char *)sUid.arr, aUserID);
+    sUid.len = (short)strlen((char *)sUid.arr);
+    strcpy((char *)sPwd.arr, sPassword);
+    sPwd.len = (short)strlen((char *)sPwd.arr);
+    strcpy((char *)sConnStr.arr, aHostInfo);
+    sConnStr.len = (short)strlen((char *)sConnStr.arr);
+
+    /* DB 연결 */
+    EXEC SQL CONNECT :sUid IDENTIFIED BY :sPwd USING :sConnStr;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] Connection Failure!");
+
+    return FAILURE;
+}
+
+int Disconnect()
+{
+    EXEC SQL DISCONNECT;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] Disconnect Failure!");
+
+    return FAILURE;
+}

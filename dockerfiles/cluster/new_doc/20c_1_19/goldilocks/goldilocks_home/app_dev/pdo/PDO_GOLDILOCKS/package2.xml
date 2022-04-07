@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package packagerversion="1.4.2" version="2.0" xmlns="http://pear.php.net/dtd/package-2.0" xmlns:tasks="http://pear.php.net/dtd/tasks-1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://pear.php.net/dtd/tasks-1.0
+http://pear.php.net/dtd/tasks-1.0.xsd
+http://pear.php.net/dtd/package-2.0
+http://pear.php.net/dtd/package-2.0.xsd">
+ <name>PDO_GOLDILOCKS</name>
+ <channel>pecl.php.net</channel>
+ <summary>GOLDILOCKS driver for PDO</summary>
+ <description>This extension provides a GOLDILOCKS driver for PDO. </description>
+ <lead>
+  <name>SUNJESOFT</name>
+  <user>SUNJESOFT</user>
+  <email>sunjesoft@sunjesoft.com</email>
+  <active>yes</active>
+ </lead>
+ <date>2021-05-11</date>
+ <version>
+  <release>20.1.19</release>
+  <api>20.1.19</api>
+ </version>
+ <stability>
+  <release>stable</release>
+  <api>stable</api>
+ </stability>
+ <license uri="http://www.php.net/license">PHP</license>
+ <notes>
+ This PECL release is the first release of GOLDILOCKS PDO Driver.
+ </notes>
+ <contents>
+  <dir name="/">
+   <file name="CREDITS" role="doc" />
+   <file name="config.m4" role="src" />
+   <file name="config.w32" role="src" />
+   <file name="goldilocks_driver.c" role="src" />
+   <file name="goldilocks_driver7.c" role="src" />
+   <file name="goldilocks_stmt.c" role="src" />
+   <file name="goldilocks_stmt7.c" role="src" />
+   <file name="pdo_goldilocks.c" role="src" />
+   <file name="php_pdo_goldilocks.h" role="src" />
+   <file name="php_pdo_goldilocks_int.h" role="src" />
+  </dir> <!-- / -->
+ </contents>
+ <dependencies>
+  <required>
+   <php>
+    <min>5.1.0</min>
+   </php>
+   <pearinstaller>
+    <min>1.4.0</min>
+   </pearinstaller>
+  </required>
+ </dependencies>
+ <providesextension>PDO_GOLDILOCKS</providesextension>
+ <extsrcrelease>
+  <configureoption name="with-pdo-goldilocks" default="$GOLDILOCKS_HOME" prompt="GOLDILOCKS installation directory?" />
+ </extsrcrelease>
+</package>

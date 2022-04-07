@@ -1,0 +1,10 @@
+# Kubernetes-managed hosts file (host network).
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+10.0.0.194	dns
+10.0.0.194	deploy
+10.0.0.194	router
+10.0.0.194	okd-master.novalocal
+10.0.0.180	okd-worker1.novalocal
+10.0.0.83	okd-worker2.novalocal
+127.0.0.1	jsokd

@@ -1,0 +1,323 @@
+/*
+ * date_time.gc
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+EXEC SQL INCLUDE SQLCA;
+
+#define  SUCCESS  0
+#define  FAILURE  -1
+
+#define  PRINT_SQL_ERROR(aMsg)                                      \
+    {                                                               \
+        printf("\n");                                               \
+        printf(aMsg);                                               \
+        printf("\nSQLCODE : %d\nSQLSTATE : %s\nERROR MSG : %s\n",   \
+               sqlca.sqlcode,                                       \
+               SQLSTATE,                                            \
+               sqlca.sqlerrm.sqlerrmc );                            \
+    }
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword);
+int CreateTable();
+int DropTable();
+
+int main(int     argc,
+         char  **argv)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    int                      sNo;
+    int                      sResultNo;
+    DATE                     sDate, sResultDate;
+    TIME                     sTime, sResultTime;
+    TIME WITH TIMEZONE       sTimeTz, sResultTimeTz;
+    TIMESTAMP                sTimestamp, sResultTimestamp;
+    TIMESTAMP WITH TIMEZONE  sTimestampTz, sResultTimestampTz;
+    EXEC SQL END DECLARE SECTION;
+    int  sState = 0;
+
+    printf("#### Datatype Insert Test ####\n");
+
+    printf("Connect GOLDILOCKS ...\n");
+    if(Connect("DSN=GOLDILOCKS", "test", "test") != SUCCESS)
+    {
+        goto fail_exit;
+    }
+    sState = 1;
+
+    printf("Create table ...\n");
+    if(CreateTable() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+    sState = 2;
+
+    printf("Insert record ...\n");
+
+    sNo = 1;
+    /**
+     * Date : 2014-7-14 21:29:30
+     */
+    sDate.year  = 2014;
+    sDate.month = 7;
+    sDate.day   = 14;
+    sDate.hour  = 21;
+    sDate.minute = 29;
+    sDate.second = 30;
+    sDate.fraction = 0;
+
+    /**
+     * Time : 17:46:35
+     */
+    sTime.hour   = 17;
+    sTime.minute = 46;
+    sTime.second = 35;
+
+    /**
+     * Time With Timezone : 17:46:35.6789(+9:00)
+     */
+    sTimeTz.hour             = 17;
+    sTimeTz.minute           = 46;
+    sTimeTz.second           = 35;
+    sTimeTz.fraction         = 678900000;
+    sTimeTz.timezone_hour    = 9;
+    sTimeTz.timezone_minute  = 0;
+
+    /**
+     * Timestamp : 2014-02-13 17:46:28.123
+     */
+    sTimestamp.year     = 2014;
+    sTimestamp.month    = 2;
+    sTimestamp.day      = 13;
+    sTimestamp.hour     = 17;
+    sTimestamp.minute   = 46;
+    sTimestamp.second   = 28;
+    sTimestamp.fraction = 123000000;
+
+    /**
+     * Time With Timezone : 2014-05-18 17:46:35.001(+9:00)
+     */
+    sTimestampTz.year     = 2014;
+    sTimestampTz.month    = 5;
+    sTimestampTz.day      = 18;
+    sTimestampTz.hour     = 17;
+    sTimestampTz.minute   = 46;
+    sTimestampTz.second   = 35;
+    sTimestampTz.fraction = 1000000;
+    sTimestampTz.timezone_hour    = 9;
+    sTimestampTz.timezone_minute  = 0;
+
+    /**
+     * Insert record
+     */
+    EXEC SQL
+        INSERT INTO TEST_T1(C1, C2, C3, C4, C5, C6)
+        VALUES(:sNo, :sDate, :sTime, :sTimeTz, :sTimestamp, :sTimestampTz);
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    printf("Retrive record\n");
+    EXEC SQL
+        SELECT C1, C2, C3, C4, C5, C6
+        INTO   :sResultNo, :sResultDate, :sResultTime, :sResultTimeTz, :sResultTimestamp, :sResultTimestampTz
+        FROM   TEST_T1
+        WHERE  C1 = 1;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    printf("=================================================================\n");
+    printf( "DATE                   : %04d-%02d-%02d %02d:%02d:%02d\n",
+            sResultDate.year,
+            sResultDate.month,
+            sResultDate.day,
+            sResultDate.hour,
+            sResultDate.minute,
+            sResultDate.second );
+
+    printf( "TIME                   : %02d:%02d:%02d\n",
+            sResultTime.hour,
+            sResultTime.minute,
+            sResultTime.second );
+
+    printf( "TIME WITH TIMEZONE     : %02d:%02d:%02d.%09u(GMT %+02d:%02d)\n",
+            sResultTimeTz.hour,
+            sResultTimeTz.minute,
+            sResultTimeTz.second,
+            sResultTimeTz.fraction,
+            sResultTimeTz.timezone_hour,
+            sResultTimeTz.timezone_minute );
+
+    printf( "TIMESTAMP              : %04d-%02d-%02d %02d:%02d:%02d.%09u\n",
+            sResultTimestamp.year,
+            sResultTimestamp.month,
+            sResultTimestamp.day,
+            sResultTimestamp.hour,
+            sResultTimestamp.minute,
+            sResultTimestamp.second,
+            sResultTimestamp.fraction );
+
+    printf( "TIMESTAMP WITH TIMEZONE: %04d-%02d-%02d %02d:%02d:%02d.%09u(GMT %+02d:%02d)\n",
+            sResultTimestampTz.year,
+            sResultTimestampTz.month,
+            sResultTimestampTz.day,
+            sResultTimestampTz.hour,
+            sResultTimestampTz.minute,
+            sResultTimestampTz.second,
+            sResultTimestampTz.fraction,
+            sResultTimestampTz.timezone_hour,
+            sResultTimestampTz.timezone_minute );
+
+    printf("=================================================================\n");
+
+    sState = 0;
+    printf("Drop table ...\n");
+    if(DropTable() != SUCCESS)
+    {
+        goto fail_exit;
+    }
+
+    sState = 0;
+    printf("Disconnect GOLDILOCKS ...\n");
+    EXEC SQL COMMIT WORK RELEASE;
+
+    printf("SUCCESS\n");
+    printf("############################\n");
+
+    return 0;
+
+  fail_exit:
+
+    printf("\n");
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    printf("FAILURE\n");
+    printf("############################\n\n");
+
+    switch(sState)
+    {
+        case 1:
+            printf("Drop table ...\n");
+            (void)DropTable();
+        default:
+            break;
+    }
+
+    EXEC SQL ROLLBACK WORK RELEASE;
+
+    return 0;
+}
+
+int CreateTable()
+{
+    EXEC SQL DROP TABLE IF EXISTS TEST_T1;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    /*----------------------------------------------
+      Create Table
+      ------------------------------------------------*/
+    EXEC SQL CREATE TABLE TEST_T1 ( C1  INTEGER,
+                                    C2  DATE,
+                                    C3  TIME,
+                                    C4  TIME WITH TIME ZONE,
+                                    C5  TIMESTAMP,
+                                    C6  TIMESTAMP WITH TIME ZONE );
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    EXEC SQL ROLLBACK WORK;
+
+    return FAILURE;
+}
+
+int DropTable()
+{
+    /*----------------------------------------------
+      Drop Table
+      ------------------------------------------------*/
+    EXEC SQL DROP TABLE TEST_T1;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    EXEC SQL COMMIT WORK;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] SQL ERROR -");
+
+    EXEC SQL ROLLBACK WORK;
+
+    return FAILURE;
+}
+
+int Connect(char *aHostInfo, char *aUserID, char *sPassword)
+{
+    EXEC SQL BEGIN DECLARE SECTION;
+    VARCHAR  sUid[80];
+    VARCHAR  sPwd[20];
+    VARCHAR  sConnStr[1024];
+    EXEC SQL END DECLARE SECTION;
+
+    /*----------------------------------------------
+      Log on GOLDILOCKS
+      ------------------------------------------------*/
+    strcpy((char *)sUid.arr, aUserID);
+    sUid.len = (short)strlen((char *)sUid.arr);
+    strcpy((char *)sPwd.arr, sPassword);
+    sPwd.len = (short)strlen((char *)sPwd.arr);
+    strcpy((char *)sConnStr.arr, aHostInfo);
+    sConnStr.len = (short)strlen((char *)sConnStr.arr);
+
+    /* DB 연결 */
+    EXEC SQL CONNECT :sUid IDENTIFIED BY :sPwd USING :sConnStr;
+    if(sqlca.sqlcode != 0)
+    {
+        goto fail_exit;
+    }
+
+    return SUCCESS;
+
+  fail_exit:
+
+    PRINT_SQL_ERROR("[ERROR] Connection Failure!");
+
+    return FAILURE;
+}

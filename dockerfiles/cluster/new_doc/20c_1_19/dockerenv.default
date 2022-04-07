@@ -1,0 +1,21 @@
+#!/usr/bin/env
+
+# docker image create
+NS ?= sunjesoft
+VERSION ?= 20c_1_19
+IMAGE_NAME ?= cluster
+
+CONTAINER_NAME ?= goldilocks
+CONTAINER_INSTANCE ?= 0
+
+# docker run
+PORTS =  -p 16101:10101 -p 24581:22581
+VOLUMES = -v ${PWD}/goldilocks/goldilocks_data:/home/sunje/goldilocks_data \
+  -v ${PWD}/goldilocks/goldilocks_home:/home/sunje/goldilocks_home \
+  -v ${PWD}/goldilocks/goldilocks_home/logind.conf:/etc/systemd/logind.conf 
+ENV = -e TABLE_SPACE_SIZE=100M -e TEMP_TABLESPACE_SIZE=100M -e SERVICE_ACCOUNT=SA
+OPTION= --sysctl kernel.shmmax=50359959552 \
+  --sysctl kernel.shmmni=4096 \
+  --sysctl kernel.shmall=12294912 \
+  --sysctl kernel.sem="250 32000 100 128" \
+  --hostname goldilocks-0

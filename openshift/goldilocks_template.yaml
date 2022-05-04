@@ -27,6 +27,7 @@ objects:
   kind: StatefulSet
   metadata:
     labels:
+      release: goldilocks
       app: goldilocks
       group: goldilocks
     name: goldilocks
@@ -34,6 +35,7 @@ objects:
     podManagementPolicy: OrderedReady
     selector:
         matchLabels:
+          release: goldilocks
           app: goldilocks
           group: goldilocks
     replicas: 1
@@ -42,6 +44,7 @@ objects:
     template:
       metadata:
         labels:
+          release: goldilocks
           app: goldilocks
           group: goldilocks
       spec:
@@ -49,8 +52,6 @@ objects:
         - env:
           - name: APP_NAME
             value: GOLDILOCKS
-          - name: MY_POD_NAME
-            value: goldilocks-0
           - name: MY_POD_IP
             valueFrom:
               fieldRef:
